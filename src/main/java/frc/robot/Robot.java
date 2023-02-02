@@ -9,15 +9,15 @@ import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.RelativeEncoder;
 
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.DriverStation;
+//import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj.PowerDistribution;
-import edu.wpi.first.wpilibj.SPI;
-import edu.wpi.first.wpilibj.Timer;
+//import edu.wpi.first.wpilibj.PowerDistribution;
+//import edu.wpi.first.wpilibj.SPI;
+//import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
+//import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
 
@@ -48,21 +48,12 @@ public class Robot extends TimedRobot {
   public double gearRatio = 8.45; // Toughbox Mini
   public double rWidth = 2; // robot width in inches
 
-
-  private static final String kDefaultAuto = "Default";
-  private static final String kCustomAuto = "My Auto";
-  private String m_autoSelected;
-  private final SendableChooser<String> m_chooser = new SendableChooser<>();
-
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
    */
   @Override
   public void robotInit() {
-    m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
-    m_chooser.addOption("My Auto", kCustomAuto);
-    SmartDashboard.putData("Auto choices", m_chooser);
 
     // Drive Motors
     mLeftDriveMotor1 = new CANSparkMax(3, MotorType.kBrushless);
@@ -104,6 +95,9 @@ public class Robot extends TimedRobot {
     mRightDriveMotor2.burnFlash();
 
     mRobotDrive = new DifferentialDrive(mLeftMotors, mRightMotors);
+   
+    mStick = new Joystick(0);
+    mXbox = new XboxController(1);
 
   }
 
@@ -129,30 +123,18 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousInit() {
-    m_autoSelected = m_chooser.getSelected();
-    // m_autoSelected = SmartDashboard.getString("Auto Selector", kDefaultAuto);
-    System.out.println("Auto selected: " + m_autoSelected);
   }
 
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
-    switch (m_autoSelected) {
-      case kCustomAuto:
-        // Put custom auto code here
-        break;
-      case kDefaultAuto:
-      default:
-        // Put default auto code here
-        break;
-    }
   }
 
   /** This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {
-    mRightEncoder.setPosition(0);
-    mLeftEncoder.setPosition(0);
+    //mRightEncoder.setPosition(0);
+    //mLeftEncoder.setPosition(0);
     mRobotDrive.arcadeDrive(0, 0);
   }
 
