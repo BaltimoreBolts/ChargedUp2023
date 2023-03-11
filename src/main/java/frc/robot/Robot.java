@@ -11,14 +11,13 @@ import com.revrobotics.RelativeEncoder;
 import edu.wpi.first.wpilibj.TimedRobot;
 //import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+//import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.PowerDistribution;
 //import edu.wpi.first.wpilibj.SPI;
 //import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
-//import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
 
@@ -58,8 +57,8 @@ public class Robot extends TimedRobot {
   public double maxArm = 96.00; // encoder value at full extension for arm
   public double midArm = 50.00; // encoder value at mid extension for arm
   public double closedArm = 0; // encoder value at full retraction for arm 
-  public double speedOut = 0.25;
-  public double speedIn = -0.25;
+  public double speedOut = -0.25;
+  public double speedIn = 0.25;
   public boolean mArmGoToMAX = false;
   public boolean mArmGoToMID = false;
 
@@ -218,14 +217,14 @@ public class Robot extends TimedRobot {
       //light to YELLOW
     }
     else if (mXbox.getLeftTriggerAxis() == 1){ //Pickup CONE
-      mGrabber.set(0.25);
+      mGrabber.set(-0.25);
     }
     else if (mXbox.getRightBumper()) { //Signal CUBE lights
       mGrabber.stopMotor();
       //light to PURPLE
     }
     else if (mXbox.getRightTriggerAxis() == 1){ //Pickup CUBE
-      mGrabber.set(-0.25);
+      mGrabber.set(0.25);
     }    
     else {
       mGrabber.stopMotor();
