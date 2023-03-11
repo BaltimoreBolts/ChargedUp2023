@@ -56,10 +56,10 @@ public class Robot extends TimedRobot {
   public void robotInit() {
 
     // Drive Motors
-    mLeftDriveMotor1 = new CANSparkMax(3, MotorType.kBrushless);
-    mLeftDriveMotor2 = new CANSparkMax(4, MotorType.kBrushless);
-    mRightDriveMotor1 = new CANSparkMax(1, MotorType.kBrushless);
-    mRightDriveMotor2 = new CANSparkMax(2, MotorType.kBrushless);
+    mLeftDriveMotor1 = new CANSparkMax(5, MotorType.kBrushless);
+    mLeftDriveMotor2 = new CANSparkMax(2, MotorType.kBrushless);
+    mRightDriveMotor1 = new CANSparkMax(4, MotorType.kBrushless);
+    mRightDriveMotor2 = new CANSparkMax(3, MotorType.kBrushless);
     mLeftMotors = new MotorControllerGroup(mLeftDriveMotor1, mLeftDriveMotor2);
     mRightMotors = new MotorControllerGroup(mRightDriveMotor1, mRightDriveMotor2);
 
