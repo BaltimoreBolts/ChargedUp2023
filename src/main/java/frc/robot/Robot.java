@@ -62,6 +62,8 @@ public class Robot extends TimedRobot {
   public boolean mArmGoToMAX = false;
   public boolean mArmGoToMID = false;
 
+  public double autonFinalPos = -120; // inches to drive backwards
+
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
@@ -177,6 +179,13 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
+
+    // move at least 45" backwards (negative position)
+    if (mLeftEncoder.getPosition() > autonFinalPos) {
+      mRobotDrive.arcadeDrive(-0.35, 0);
+    } else {
+      mRobotDrive.arcadeDrive(0, 0);
+    }
   }
 
   /** This function is called once when teleop is enabled. */
