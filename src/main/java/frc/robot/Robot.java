@@ -13,10 +13,11 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-//import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.PowerDistribution;
 //import edu.wpi.first.wpilibj.SPI;
 //import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 //import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
@@ -39,6 +40,12 @@ public class Robot extends TimedRobot {
   public RelativeEncoder mLeftEncoder;
   public RelativeEncoder mRightEncoder;
 
+  public PowerDistribution mPowerDistribution;
+
+  public CANSparkMax mArm;
+  public CANSparkMax mGrabber;
+  public RelativeEncoder mArmEncoder;
+
   public Joystick mStick;
   public XboxController mXbox;
   public double mSpeed = 0.0;
@@ -48,12 +55,25 @@ public class Robot extends TimedRobot {
   public double gearRatio = 8.45; // Toughbox Mini
   public double rWidth = 2; // robot width in inches
 
+  public double maxArm = 96.00; // encoder value at full extension for arm
+  public double midArm = 50.00; // encoder value at mid extension for arm
+  public double closedArm = 0; // encoder value at full retraction for arm 
+  public double speedOut = 0.25;
+  public double speedIn = -0.25;
+  public boolean mArmGoToMAX = false;
+  public boolean mArmGoToMID = false;
+
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
    */
   @Override
   public void robotInit() {
+
+    // Power Distribution -- must be at CAN ID 1
+    mPowerDistribution = new PowerDistribution(1, ModuleType.kRev);
+    mPowerDistribution.clearStickyFaults();
+    mPowerDistribution.setSwitchableChannel(false);
 
     // Drive Motors
     mLeftDriveMotor1 = new CANSparkMax(5, MotorType.kBrushless);
@@ -95,7 +115,22 @@ public class Robot extends TimedRobot {
     mRightDriveMotor2.burnFlash();
 
     mRobotDrive = new DifferentialDrive(mLeftMotors, mRightMotors);
-   
+
+    // GPM Motors
+    mArm = new CANSparkMax(6, MotorType.kBrushless);
+    mGrabber = new CANSparkMax(7, MotorType.kBrushless);
+    
+    mArm.restoreFactoryDefaults();
+    mGrabber.restoreFactoryDefaults();
+    mArm.setSmartCurrentLimit(40);
+    mGrabber.setSmartCurrentLimit(40);
+    mArm.setIdleMode(CANSparkMax.IdleMode.kBrake);
+    mGrabber.setIdleMode(CANSparkMax.IdleMode.kCoast);
+    mArmEncoder = mArm.getEncoder();
+
+    mArm.burnFlash();
+    mGrabber.burnFlash();
+
     mStick = new Joystick(0);
     mXbox = new XboxController(1);
 
@@ -109,7 +144,14 @@ public class Robot extends TimedRobot {
    * SmartDashboard integrated updating.
    */
   @Override
-  public void robotPeriodic() {}
+  public void robotPeriodic() {
+
+    // push values to dashboard here
+    SmartDashboard.putNumber("[DT] LT-EncPos", mLeftEncoder.getPosition());
+    SmartDashboard.putNumber("[DT] RT-EncPos", mRightEncoder.getPosition());
+    SmartDashboard.putNumber("Arm", mArmEncoder.getPosition());   
+
+  }
 
   /**
    * This autonomous (along with the chooser code above) shows how to select between different
@@ -123,6 +165,14 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousInit() {
+
+    mRightEncoder.setPosition(0);
+    mLeftEncoder.setPosition(0);
+    mArmEncoder.setPosition(0);
+
+    mArmGoToMAX = false;
+    mArmGoToMID = false;
+
   }
 
   /** This function is called periodically during autonomous. */
@@ -133,9 +183,16 @@ public class Robot extends TimedRobot {
   /** This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {
-    //mRightEncoder.setPosition(0);
-    //mLeftEncoder.setPosition(0);
+    mRightEncoder.setPosition(0);
+    mLeftEncoder.setPosition(0);
+    //mArmEncoder.setPosition(0);
+
+    mArm.stopMotor();
+    mGrabber.stopMotor();
     mRobotDrive.arcadeDrive(0, 0);
+
+    mArmGoToMAX = false;
+    mArmGoToMID = false;
   }
 
   /** This function is called periodically during operator control. */
@@ -147,30 +204,107 @@ public class Robot extends TimedRobot {
      mTwist = mStick.getTwist() * ((mStick.getThrottle() * -0.5) + 0.5);
      mRobotDrive.arcadeDrive(mSpeed, mTwist);   
 
+
+    // Reset encoders 
+    if (mStick.getRawButton(12)) {
+      mRightEncoder.setPosition(0);
+      mLeftEncoder.setPosition(0);
+      mArmEncoder.setPosition(0);   
     }
 
+    //Grabber control
+    if (mXbox.getLeftBumper()) { //Signal CONE lights
+      mGrabber.stopMotor();
+      //light to YELLOW
+    }
+    else if (mXbox.getLeftTriggerAxis() == 1){ //Pickup CONE
+      mGrabber.set(0.25);
+    }
+    else if (mXbox.getRightBumper()) { //Signal CUBE lights
+      mGrabber.stopMotor();
+      //light to PURPLE
+    }
+    else if (mXbox.getRightTriggerAxis() == 1){ //Pickup CUBE
+      mGrabber.set(-0.25);
+    }    
+    else {
+      mGrabber.stopMotor();
+    }
 
+    //Arm control
+    /*
+    Auto position: 
+      Full Extension = DPad UP
+      Mid Extension = DPad LEFT or RIGHT
+      Full Retract = DPad DOWN  (mXbox.getPOV() == 180)
+      
+    Control
+      Y button = arm out (hold)
+      A button = arm in (hold)
+    */
+
+    if ((mXbox.getPOV()==0) || mArmGoToMAX){  //Extend arm to MAX
+      mArmGoToMAX = true;
+      if (mArmEncoder.getPosition() < maxArm) {
+        mArm.set(speedOut);
+      }
+      else {
+        mArm.stopMotor();
+      }
+
+      if (mArmEncoder.getPosition() >= maxArm) {
+        mArmGoToMAX = false;
+      }
+    }
+    else if ((mXbox.getPOV()==90) || (mXbox.getPOV()==270) || mArmGoToMID) {  //Extend arm to MID
+      mArmGoToMID = true;
+      if (mArmEncoder.getPosition() < midArm) {
+        mArm.set(speedOut);
+      }
+      else {
+        mArm.stopMotor();
+      }
+      if (mArmEncoder.getPosition() >= midArm) {
+        mArmGoToMID = false;
+      }
+    }
+    else if ((mXbox.getPOV()==180)) {  // Retract Arm fully
+      if (mArmEncoder.getPosition() > closedArm) {
+        mArm.set(speedIn);
+      }
+      else {
+        mArm.stopMotor();
+      }
+      mArmGoToMID = false;
+      mArmGoToMAX = false;
+    }
+    else if (mXbox.getYButtonPressed()) { // Move arm out
+      mArm.set(speedOut);
+    }
+    else if (mXbox.getAButtonPressed()) { // Move arm in
+      mArm.set(speedIn);
+    }
+    else {
+      mArm.stopMotor();
+      mArmGoToMID = false;
+      mArmGoToMAX = false;
+    }
+
+  }
   /** This function is called once when the robot is disabled. */
   @Override
-  public void disabledInit() {}
+  public void disabledInit() {
+    mRightEncoder.setPosition(0);
+    mLeftEncoder.setPosition(0);
+    mArmEncoder.setPosition(0);
+  }
 
   /** This function is called periodically when disabled. */
   @Override
-  public void disabledPeriodic() {}
-
-  /** This function is called once when test mode is enabled. */
-  @Override
-  public void testInit() {}
-
-  /** This function is called periodically during test mode. */
-  @Override
-  public void testPeriodic() {}
-
-  /** This function is called once when the robot is first started up. */
-  @Override
-  public void simulationInit() {}
-
-  /** This function is called periodically whilst in simulation. */
-  @Override
-  public void simulationPeriodic() {}
+  public void disabledPeriodic() {
+    mRightEncoder.setPosition(0);
+    mLeftEncoder.setPosition(0);
+    mArmEncoder.setPosition(0);
+ 
+  }
 }
