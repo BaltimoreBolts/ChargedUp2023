@@ -7,6 +7,8 @@ package frc.robot;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.RelativeEncoder;
+import edu.wpi.first.wpilibj.SerialPort;
+import edu.wpi.first.wpilibj.SerialPort.Port;
 
 import edu.wpi.first.wpilibj.TimedRobot;
 //import edu.wpi.first.wpilibj.DriverStation;
@@ -15,7 +17,7 @@ import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.PowerDistribution;
 //import edu.wpi.first.wpilibj.SPI;
-//import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
@@ -28,6 +30,8 @@ import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
  * project.
  */
 public class Robot extends TimedRobot {
+
+  public SerialPort sendSerial;
 
   public CANSparkMax mLeftDriveMotor1;
   public CANSparkMax mRightDriveMotor1;
@@ -54,15 +58,26 @@ public class Robot extends TimedRobot {
   public double gearRatio = 8.45; // Toughbox Mini
   public double rWidth = 2; // robot width in inches
 
-  public double maxArm = 96.00; // encoder value at full extension for arm
-  public double midArm = 50.00; // encoder value at mid extension for arm
-  public double closedArm = 0; // encoder value at full retraction for arm 
+  public double maxArm = -40; // encoder value at full extension for arm
+  public double midArm = -25; // encoder value at mid extension for arm
+  public double closedArm = 1; // encoder value at full retraction for arm 
   public double speedOut = -0.25;
   public double speedIn = 0.25;
   public boolean mArmGoToMAX = false;
   public boolean mArmGoToMID = false;
+  public boolean mArmGoToHOME = false;
 
-  public double autonFinalPos = -120; // inches to drive backwards
+  public double autonStartTime;
+  public double autonWaitTime = 0; // seconds to wait
+  public double autonCurrentTime;
+  public double autonGPreleaseTime; 
+  public double autonFinalPos = -160; //-180  inches to drive backwards
+  public boolean autoArmExtend = false;
+  public boolean autoGPrelease = false;
+  public boolean autoArmRetract = false;
+  public boolean autoMove = false;
+
+  public String desiredColor;
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -70,6 +85,10 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+
+    // Serial Port
+    sendSerial = new SerialPort(9600, Port.kUSB);
+    sendSerial.writeString("0");
 
     // Power Distribution -- must be at CAN ID 1
     mPowerDistribution = new PowerDistribution(1, ModuleType.kRev);
@@ -134,7 +153,6 @@ public class Robot extends TimedRobot {
 
     mStick = new Joystick(0);
     mXbox = new XboxController(1);
-
   }
 
   /**
@@ -151,7 +169,9 @@ public class Robot extends TimedRobot {
     SmartDashboard.putNumber("[DT] LT-EncPos", mLeftEncoder.getPosition());
     SmartDashboard.putNumber("[DT] RT-EncPos", mRightEncoder.getPosition());
     SmartDashboard.putNumber("Arm", mArmEncoder.getPosition());   
-
+    SmartDashboard.putBoolean("maxArm", mArmGoToMAX);
+    SmartDashboard.putBoolean("midArm", mArmGoToMID);
+    SmartDashboard.putBoolean("homeArm", mArmGoToHOME);
   }
 
   /**
@@ -170,23 +190,82 @@ public class Robot extends TimedRobot {
     mRightEncoder.setPosition(0);
     mLeftEncoder.setPosition(0);
     mArmEncoder.setPosition(0);
+    autonStartTime = Timer.getFPGATimestamp();
 
     mArmGoToMAX = false;
     mArmGoToMID = false;
+    mArmGoToHOME = false;
 
+    autoArmExtend = false;
+    autoGPrelease = false;
+    autoArmRetract = false;
+    autoMove = false;
+
+    sendSerial.writeString("0");
   }
 
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
+    autonCurrentTime = Timer.getFPGATimestamp();
+    autonWaitTime = 0;
 
-    // move at least 45" backwards (negative position)
-    if (mLeftEncoder.getPosition() > autonFinalPos) {
-      mRobotDrive.arcadeDrive(-0.35, 0);
+ // wait x time
+ if ((autonCurrentTime - autonStartTime) >= autonWaitTime) {
+  /*
+  * arm extend out
+  * GP release
+  * arm retract
+  * move back
+  * 
+  */
+
+    if (!autoArmExtend) {
+      if (mArmEncoder.getPosition() > maxArm) {
+        mArm.set(speedOut);
+      }
+      else {
+        mArm.stopMotor();
+        autoArmExtend = true;
+        autonGPreleaseTime= Timer.getFPGATimestamp();
+      }
+    }
+
+    if (!autoGPrelease && autoArmExtend) {
+        mGrabber.set(0.35);
+        if ((autonCurrentTime - autonGPreleaseTime) >= 1){
+          mGrabber.stopMotor();
+          autoGPrelease = true;
+        }
+    }
+
+    if (!autoArmRetract && autoGPrelease) {
+      if (mArmEncoder.getPosition() < closedArm) {
+        mArm.set(speedIn);
+      }
+      else {
+        mArm.stopMotor();
+        autoArmRetract = true;
+      }
+    }
+
+    if (!autoMove && autoArmRetract) {
+       // move at least X" backwards (negative position)
+      if (mLeftEncoder.getPosition() > autonFinalPos) {
+        mRobotDrive.arcadeDrive(-0.5, 0);
+      } else {
+        mRobotDrive.arcadeDrive(0, 0);
+      }
     } else {
+     mRobotDrive.arcadeDrive(0, 0);
+    }
+ 
+    } // not past wait time
+    else {
       mRobotDrive.arcadeDrive(0, 0);
     }
-  }
+ 
+  } //end routine
 
   /** This function is called once when teleop is enabled. */
   @Override
@@ -201,6 +280,10 @@ public class Robot extends TimedRobot {
 
     mArmGoToMAX = false;
     mArmGoToMID = false;
+    mArmGoToHOME = false;
+
+    desiredColor = "0";
+    sendSerial.writeString(desiredColor);
   }
 
   /** This function is called periodically during operator control. */
@@ -210,7 +293,7 @@ public class Robot extends TimedRobot {
     // Drive robot
      mSpeed = -mStick.getY() * ((mStick.getThrottle() * -0.5) + 0.5);
      mTwist = mStick.getTwist() * ((mStick.getThrottle() * -0.5) + 0.5);
-     mRobotDrive.arcadeDrive(mSpeed, mTwist);   
+     mRobotDrive.arcadeDrive(mSpeed, -mTwist);   
 
 
     // Reset encoders 
@@ -222,18 +305,20 @@ public class Robot extends TimedRobot {
 
     //Grabber control
     if (mXbox.getLeftBumper()) { //Signal CONE lights
-      mGrabber.stopMotor();
       //light to YELLOW
+      desiredColor = "1";
+      sendSerial.writeString(desiredColor);
     }
     else if (mXbox.getLeftTriggerAxis() == 1){ //Pickup CONE
-      mGrabber.set(-0.25);
+      mGrabber.set(-0.45);
     }
     else if (mXbox.getRightBumper()) { //Signal CUBE lights
-      mGrabber.stopMotor();
       //light to PURPLE
+      desiredColor = "2";
+      sendSerial.writeString(desiredColor);
     }
     else if (mXbox.getRightTriggerAxis() == 1){ //Pickup CUBE
-      mGrabber.set(0.25);
+      mGrabber.set(0.35);
     }    
     else {
       mGrabber.stopMotor();
@@ -253,49 +338,55 @@ public class Robot extends TimedRobot {
 
     if ((mXbox.getPOV()==0) || mArmGoToMAX){  //Extend arm to MAX
       mArmGoToMAX = true;
-      if (mArmEncoder.getPosition() < maxArm) {
+      if (mArmEncoder.getPosition() > maxArm) {
         mArm.set(speedOut);
       }
       else {
         mArm.stopMotor();
       }
 
-      if (mArmEncoder.getPosition() >= maxArm) {
+      if (mArmEncoder.getPosition() <= (maxArm)) {
         mArmGoToMAX = false;
       }
     }
     else if ((mXbox.getPOV()==90) || (mXbox.getPOV()==270) || mArmGoToMID) {  //Extend arm to MID
       mArmGoToMID = true;
-      if (mArmEncoder.getPosition() < midArm) {
+      if (mArmEncoder.getPosition() > midArm+5) {
         mArm.set(speedOut);
       }
-      else {
-        mArm.stopMotor();
-      }
-      if (mArmEncoder.getPosition() >= midArm) {
-        mArmGoToMID = false;
-      }
-    }
-    else if ((mXbox.getPOV()==180)) {  // Retract Arm fully
-      if (mArmEncoder.getPosition() > closedArm) {
+      else if (mArmEncoder.getPosition() < (midArm-5)) {
         mArm.set(speedIn);
       }
       else {
         mArm.stopMotor();
       }
+      if ((mArmEncoder.getPosition() <= (midArm+5)) && (mArmEncoder.getPosition() >= (midArm-5))) {
+        mArmGoToMID = false;
+      }
+    }
+    else if ((mXbox.getPOV()==180) || mArmGoToHOME) {  // Retract Arm fully
+      if (mArmEncoder.getPosition() < closedArm) {
+        mArm.set(speedIn);
+      }
+      else {
+        mArm.stopMotor();
+        mArmGoToHOME = false;
+      }
       mArmGoToMID = false;
       mArmGoToMAX = false;
+      mArmGoToHOME = false;
     }
-    else if (mXbox.getYButtonPressed()) { // Move arm out
+    else if (mXbox.getYButton()) { // Move arm out
       mArm.set(speedOut);
     }
-    else if (mXbox.getAButtonPressed()) { // Move arm in
+    else if (mXbox.getAButton()) { // Move arm in
       mArm.set(speedIn);
     }
     else {
       mArm.stopMotor();
       mArmGoToMID = false;
       mArmGoToMAX = false;
+      mArmGoToHOME = false;
     }
 
   }
@@ -305,6 +396,13 @@ public class Robot extends TimedRobot {
     mRightEncoder.setPosition(0);
     mLeftEncoder.setPosition(0);
     mArmEncoder.setPosition(0);
+    mArmGoToMID = false;
+    mArmGoToMAX = false;
+    mArmGoToHOME = false;
+    autoArmExtend = false;
+    autoGPrelease = false;
+    autoArmRetract = false;
+    autoMove = false;
   }
 
   /** This function is called periodically when disabled. */
@@ -313,6 +411,13 @@ public class Robot extends TimedRobot {
     mRightEncoder.setPosition(0);
     mLeftEncoder.setPosition(0);
     mArmEncoder.setPosition(0);
+    mArmGoToMID = false;
+    mArmGoToMAX = false;
+    mArmGoToHOME = false;
+    autoArmExtend = false;
+    autoGPrelease = false;
+    autoArmRetract = false;
+    autoMove = false;
  
   }
 }
