@@ -86,8 +86,8 @@ public class Robot extends TimedRobot {
     mLeftEncoder.setPositionConversionFactor((Math.PI * wheelDia) / gearRatio);
     mRightEncoder.setPositionConversionFactor((Math.PI * wheelDia) / gearRatio);
 
-    mLeftDriveMotor1.setInverted(true);
-    mLeftDriveMotor2.setInverted(true);
+    mRightDriveMotor1.setInverted(true);
+    mRightDriveMotor2.setInverted(true);
 
     mLeftDriveMotor1.burnFlash();
     mLeftDriveMotor2.burnFlash();
