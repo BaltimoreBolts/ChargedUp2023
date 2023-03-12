@@ -7,11 +7,9 @@ package frc.robot;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.RelativeEncoder;
-import edu.wpi.first.wpilibj.SerialPort;
-import edu.wpi.first.wpilibj.SerialPort.Port;
 
 import edu.wpi.first.wpilibj.TimedRobot;
-//import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Joystick;
 //import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -30,8 +28,6 @@ import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
  * project.
  */
 public class Robot extends TimedRobot {
-
-  public SerialPort sendSerial;
 
   public CANSparkMax mLeftDriveMotor1;
   public CANSparkMax mRightDriveMotor1;
@@ -58,7 +54,7 @@ public class Robot extends TimedRobot {
   public double gearRatio = 8.45; // Toughbox Mini
   public double rWidth = 2; // robot width in inches
 
-  public double maxArm = -40; // encoder value at full extension for arm
+  public double maxArm = -43; // encoder value at full extension for arm
   public double midArm = -25; // encoder value at mid extension for arm
   public double closedArm = 1; // encoder value at full retraction for arm 
   public double speedOut = -0.25;
@@ -78,6 +74,7 @@ public class Robot extends TimedRobot {
   public boolean autoMove = false;
 
   public String desiredColor;
+  public double matchTimer;
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -85,10 +82,6 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
-
-    // Serial Port
-    sendSerial = new SerialPort(9600, Port.kUSB);
-    sendSerial.writeString("0");
 
     // Power Distribution -- must be at CAN ID 1
     mPowerDistribution = new PowerDistribution(1, ModuleType.kRev);
@@ -172,6 +165,9 @@ public class Robot extends TimedRobot {
     SmartDashboard.putBoolean("maxArm", mArmGoToMAX);
     SmartDashboard.putBoolean("midArm", mArmGoToMID);
     SmartDashboard.putBoolean("homeArm", mArmGoToHOME);
+
+    matchTimer = DriverStation.getMatchTime();
+    SmartDashboard.putNumber("MatchTime", matchTimer);
   }
 
   /**
@@ -200,8 +196,6 @@ public class Robot extends TimedRobot {
     autoGPrelease = false;
     autoArmRetract = false;
     autoMove = false;
-
-    sendSerial.writeString("0");
   }
 
   /** This function is called periodically during autonomous. */
@@ -220,8 +214,8 @@ public class Robot extends TimedRobot {
   * 
   */
 
-    if (!autoArmExtend) {
-      if (mArmEncoder.getPosition() > maxArm) {
+    if (!autoArmExtend){
+      if ((mArmEncoder.getPosition() > maxArm) || (autonCurrentTime-autonStartTime <= 3)) {
         mArm.set(speedOut);
       }
       else {
@@ -272,7 +266,7 @@ public class Robot extends TimedRobot {
   public void teleopInit() {
     mRightEncoder.setPosition(0);
     mLeftEncoder.setPosition(0);
-    //mArmEncoder.setPosition(0);
+    mArmEncoder.setPosition(0);
 
     mArm.stopMotor();
     mGrabber.stopMotor();
@@ -281,15 +275,37 @@ public class Robot extends TimedRobot {
     mArmGoToMAX = false;
     mArmGoToMID = false;
     mArmGoToHOME = false;
+  
+    mLeftDriveMotor1.setIdleMode(CANSparkMax.IdleMode.kCoast);
+    mLeftDriveMotor2.setIdleMode(CANSparkMax.IdleMode.kCoast);
+    mRightDriveMotor1.setIdleMode(CANSparkMax.IdleMode.kCoast);
+    mRightDriveMotor2.setIdleMode(CANSparkMax.IdleMode.kCoast);
 
-    desiredColor = "0";
-    sendSerial.writeString(desiredColor);
+    mLeftDriveMotor1.burnFlash();
+    mLeftDriveMotor2.burnFlash();
+    mRightDriveMotor1.burnFlash();
+    mRightDriveMotor2.burnFlash();
   }
 
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
 
+
+    // Switch drive to BRAKE in end game
+    
+    if (matchTimer < 30) {
+      mLeftDriveMotor1.setIdleMode(CANSparkMax.IdleMode.kBrake);
+      mLeftDriveMotor2.setIdleMode(CANSparkMax.IdleMode.kBrake);
+      mRightDriveMotor1.setIdleMode(CANSparkMax.IdleMode.kBrake);
+      mRightDriveMotor2.setIdleMode(CANSparkMax.IdleMode.kBrake);  
+
+      mLeftDriveMotor1.burnFlash();
+      mLeftDriveMotor2.burnFlash();
+      mRightDriveMotor1.burnFlash();
+      mRightDriveMotor2.burnFlash();
+    }
+    
     // Drive robot
      mSpeed = -mStick.getY() * ((mStick.getThrottle() * -0.5) + 0.5);
      mTwist = mStick.getTwist() * ((mStick.getThrottle() * -0.5) + 0.5);
@@ -306,16 +322,12 @@ public class Robot extends TimedRobot {
     //Grabber control
     if (mXbox.getLeftBumper()) { //Signal CONE lights
       //light to YELLOW
-      desiredColor = "1";
-      sendSerial.writeString(desiredColor);
     }
     else if (mXbox.getLeftTriggerAxis() == 1){ //Pickup CONE
       mGrabber.set(-0.45);
     }
     else if (mXbox.getRightBumper()) { //Signal CUBE lights
       //light to PURPLE
-      desiredColor = "2";
-      sendSerial.writeString(desiredColor);
     }
     else if (mXbox.getRightTriggerAxis() == 1){ //Pickup CUBE
       mGrabber.set(0.35);
