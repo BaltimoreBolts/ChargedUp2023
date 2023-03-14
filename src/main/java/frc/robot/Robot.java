@@ -54,7 +54,7 @@ public class Robot extends TimedRobot {
   public double gearRatio = 8.45; // Toughbox Mini
   public double rWidth = 2; // robot width in inches
 
-  public double maxArm = -43; // encoder value at full extension for arm
+  public double maxArm = -40; // encoder value at full extension for arm
   public double midArm = -25; // encoder value at mid extension for arm
   public double closedArm = 1; // encoder value at full retraction for arm 
   public double speedOut = -0.25;
@@ -215,7 +215,7 @@ public class Robot extends TimedRobot {
   */
 
     if (!autoArmExtend){
-      if ((mArmEncoder.getPosition() > maxArm) || (autonCurrentTime-autonStartTime <= 3)) {
+      if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 3)) {
         mArm.set(speedOut);
       }
       else {
