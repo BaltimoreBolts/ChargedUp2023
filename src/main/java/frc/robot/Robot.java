@@ -14,13 +14,14 @@ import edu.wpi.first.wpilibj.Joystick;
 //import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.PowerDistribution;
-//import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
 
+import edu.wpi.first.wpilibj.SPI;
+import com.kauailabs.navx.frc.AHRS;
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
  * each mode, as described in the TimedRobot documentation. If you change the name of this class or
@@ -28,6 +29,8 @@ import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
  * project.
  */
 public class Robot extends TimedRobot {
+
+  public AHRS mGyro;
 
   public CANSparkMax mLeftDriveMotor1;
   public CANSparkMax mRightDriveMotor1;
@@ -75,6 +78,7 @@ public class Robot extends TimedRobot {
 
   public String desiredColor;
   public double matchTimer;
+  public double mCurrentAngle;
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -88,6 +92,13 @@ public class Robot extends TimedRobot {
     mPowerDistribution.clearStickyFaults();
     mPowerDistribution.setSwitchableChannel(false);
 
+    //navX
+    try {
+      mGyro = new AHRS(SPI.Port.kMXP);
+    } catch (RuntimeException ex) {
+      DriverStation.reportError("Error instantiating navX MXP: " + ex.getMessage(), true);
+    }
+    
     // Drive Motors
     mLeftDriveMotor1 = new CANSparkMax(5, MotorType.kBrushless);
     mLeftDriveMotor2 = new CANSparkMax(2, MotorType.kBrushless);
@@ -157,6 +168,8 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
+    mCurrentAngle = mGyro.getAngle();
+    SmartDashboard.putNumber("Gyro", mCurrentAngle);
 
     // push values to dashboard here
     SmartDashboard.putNumber("[DT] LT-EncPos", mLeftEncoder.getPosition());
@@ -196,6 +209,8 @@ public class Robot extends TimedRobot {
     autoGPrelease = false;
     autoArmRetract = false;
     autoMove = false;
+
+    mGyro.reset();
   }
 
   /** This function is called periodically during autonomous. */
@@ -285,6 +300,8 @@ public class Robot extends TimedRobot {
     mLeftDriveMotor2.burnFlash();
     mRightDriveMotor1.burnFlash();
     mRightDriveMotor2.burnFlash();
+
+    mGyro.reset();
   }
 
   /** This function is called periodically during operator control. */
@@ -312,11 +329,12 @@ public class Robot extends TimedRobot {
      mRobotDrive.arcadeDrive(mSpeed, -mTwist);   
 
 
-    // Reset encoders 
+    // Reset encoders and gyro
     if (mStick.getRawButton(12)) {
       mRightEncoder.setPosition(0);
       mLeftEncoder.setPosition(0);
       mArmEncoder.setPosition(0);   
+      mGyro.reset();
     }
 
     //Grabber control
