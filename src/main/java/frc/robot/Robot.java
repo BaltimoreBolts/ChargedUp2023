@@ -247,6 +247,7 @@ public class Robot extends TimedRobot {
     mRightEncoder.setPosition(0);
     mLeftEncoder.setPosition(0);
     mArmEncoder.setPosition(0);
+    mIntakeExtEncoder.setPosition(0);
     autonStartTime = Timer.getFPGATimestamp();
 
     mArmGoToMAX = false;
@@ -257,6 +258,12 @@ public class Robot extends TimedRobot {
     autoGPrelease = false;
     autoArmRetract = false;
     autoMove = false;
+    autonIntakeExtend = false;
+    autoCubeTurn = false;
+    autoIntoCube = false;
+    autoCubeNodeTurn = false;
+    autoAtCubeNode = false;
+    autoGPrelease2 = false;
 
     mGyro.reset();
   }
@@ -591,6 +598,12 @@ public class Robot extends TimedRobot {
     autoGPrelease = false;
     autoArmRetract = false;
     autoMove = false;
+    autonIntakeExtend = false;
+    autoCubeTurn = false;
+    autoIntoCube = false;
+    autoCubeNodeTurn = false;
+    autoAtCubeNode = false;
+    autoGPrelease2 = false;
   }
 
   /** This function is called periodically when disabled. */
@@ -606,6 +619,11 @@ public class Robot extends TimedRobot {
     autoGPrelease = false;
     autoArmRetract = false;
     autoMove = false;
- 
+    autonIntakeExtend = false;
+    autoCubeTurn = false;
+    autoIntoCube = false;
+    autoCubeNodeTurn = false;
+    autoAtCubeNode = false;
+    autoGPrelease2 = false;
   }
 }
