@@ -7,11 +7,9 @@ package frc.robot;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.RelativeEncoder;
-
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Joystick;
-//import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.Timer;
@@ -19,7 +17,10 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
-
+import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.cscore.UsbCamera;
+import edu.wpi.first.cscore.VideoMode.PixelFormat;
+import edu.wpi.first.cscore.VideoSource.ConnectionStrategy;
 import edu.wpi.first.wpilibj.SPI;
 import com.kauailabs.navx.frc.AHRS;
 /**
@@ -65,6 +66,7 @@ public class Robot extends TimedRobot {
   public boolean mArmGoToMAX = false;
   public boolean mArmGoToMID = false;
   public boolean mArmGoToHOME = false;
+  public boolean setMotorsToBrake = false;
 
   public double autonStartTime;
   public double autonWaitTime = 0; // seconds to wait
@@ -80,12 +82,19 @@ public class Robot extends TimedRobot {
   public double matchTimer;
   public double mCurrentAngle;
 
+  public UsbCamera fishEye;
+
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
    */
   @Override
   public void robotInit() {
+
+    // Open USB Camera
+    fishEye = CameraServer.startAutomaticCapture();
+    fishEye.setVideoMode(PixelFormat.kYUYV, 320, 240, 30);
+    fishEye.setConnectionStrategy(ConnectionStrategy.kKeepOpen);
 
     // Power Distribution -- must be at CAN ID 1
     mPowerDistribution = new PowerDistribution(1, ModuleType.kRev);
@@ -139,6 +148,7 @@ public class Robot extends TimedRobot {
     mRightDriveMotor2.burnFlash();
 
     mRobotDrive = new DifferentialDrive(mLeftMotors, mRightMotors);
+    setMotorsToBrake = false;
 
     // GPM Motors
     mArm = new CANSparkMax(6, MotorType.kBrushless);
@@ -301,6 +311,7 @@ public class Robot extends TimedRobot {
     mRightDriveMotor1.burnFlash();
     mRightDriveMotor2.burnFlash();
 
+    setMotorsToBrake = false;
     mGyro.reset();
   }
 
@@ -311,7 +322,7 @@ public class Robot extends TimedRobot {
 
     // Switch drive to BRAKE in end game
     
-    if (matchTimer < 30) {
+    if ((matchTimer < 30) && !setMotorsToBrake) {
       mLeftDriveMotor1.setIdleMode(CANSparkMax.IdleMode.kBrake);
       mLeftDriveMotor2.setIdleMode(CANSparkMax.IdleMode.kBrake);
       mRightDriveMotor1.setIdleMode(CANSparkMax.IdleMode.kBrake);
@@ -321,13 +332,14 @@ public class Robot extends TimedRobot {
       mLeftDriveMotor2.burnFlash();
       mRightDriveMotor1.burnFlash();
       mRightDriveMotor2.burnFlash();
+
+      setMotorsToBrake = true;
     }
     
     // Drive robot
      mSpeed = -mStick.getY() * ((mStick.getThrottle() * -0.5) + 0.5);
      mTwist = mStick.getTwist() * ((mStick.getThrottle() * -0.5) + 0.5);
      mRobotDrive.arcadeDrive(mSpeed, -mTwist);   
-
 
     // Reset encoders and gyro
     if (mStick.getRawButton(12)) {
