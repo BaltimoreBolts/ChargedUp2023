@@ -8,6 +8,7 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.RelativeEncoder;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -33,6 +34,9 @@ public class Robot extends TimedRobot {
 
   public AHRS mGyro;
 
+  public DigitalInput mSwitch;
+  public boolean mAutonSwitch;
+
   public CANSparkMax mLeftDriveMotor1;
   public CANSparkMax mRightDriveMotor1;
   public CANSparkMax mLeftDriveMotor2;
@@ -49,6 +53,11 @@ public class Robot extends TimedRobot {
   public CANSparkMax mGrabber;
   public RelativeEncoder mArmEncoder;
 
+  public CANSparkMax mIntakeExt;
+  public CANSparkMax mIntakeSpin;
+  public RelativeEncoder mIntakeExtEncoder;
+  public CANSparkMax mTunnelSpin;
+
   public Joystick mStick;
   public XboxController mXbox;
   public double mSpeed = 0.0;
@@ -57,6 +66,9 @@ public class Robot extends TimedRobot {
   public double wheelDia = 6.0; // inches
   public double gearRatio = 8.45; // Toughbox Mini
   public double rWidth = 2; // robot width in inches
+
+  public double intakeOut = 30; // encoder value at full extension for arm (guess) --> find real val
+  public double closedIntake = 1;
 
   public double maxArm = -40; // encoder value at full extension for arm
   public double midArm = -25; // encoder value at mid extension for arm
@@ -72,11 +84,25 @@ public class Robot extends TimedRobot {
   public double autonWaitTime = 0; // seconds to wait
   public double autonCurrentTime;
   public double autonGPreleaseTime; 
-  public double autonFinalPos = -160; //-180  inches to drive backwards
+  public double autonFinalPos = -160; //-160  inches to drive backwards
+  public double autonCubePos = -170; //-180  inches to drive backwards
+  public double autoCubeNodePos = 189; //189  inches to cube node
+  public double autonIntoCubePos = -25;
+  public double gryoCubeAngle = 40; // turn to face cube
+  public double gryoCubeNodeAngle = -40; // turn to face cube node
   public boolean autoArmExtend = false;
   public boolean autoGPrelease = false;
   public boolean autoArmRetract = false;
   public boolean autoMove = false;
+  public boolean autonIntakeExtend = false;
+  public boolean autoCubeTurn = false;
+  public boolean autoIntoCube = false;
+  public boolean autoCubeNodeTurn = false;
+  public boolean autoAtCubeNode = false;
+  public double autonGPreleaseTime2;
+  public boolean autoGPrelease2 = false;
+  public boolean autoIntakeIn = false;
+  public double autonArmOutTime;
 
   public String desiredColor;
   public double matchTimer;
@@ -107,6 +133,8 @@ public class Robot extends TimedRobot {
     } catch (RuntimeException ex) {
       DriverStation.reportError("Error instantiating navX MXP: " + ex.getMessage(), true);
     }
+
+    mSwitch = new DigitalInput(3); // change channel after instillation 
     
     // Drive Motors
     mLeftDriveMotor1 = new CANSparkMax(5, MotorType.kBrushless);
@@ -135,6 +163,9 @@ public class Robot extends TimedRobot {
     mLeftEncoder = mLeftDriveMotor1.getEncoder();
     mRightEncoder = mRightDriveMotor1.getEncoder();
 
+    mIntakeExtEncoder = mIntakeExt.getEncoder();
+
+
     // Convert raw encoder units to inches using PIxdia/gearRatio
     mLeftEncoder.setPositionConversionFactor((Math.PI * wheelDia) / gearRatio);
     mRightEncoder.setPositionConversionFactor((Math.PI * wheelDia) / gearRatio);
@@ -149,6 +180,22 @@ public class Robot extends TimedRobot {
 
     mRobotDrive = new DifferentialDrive(mLeftMotors, mRightMotors);
     setMotorsToBrake = false;
+
+    // Intake And Tunnel
+    mIntakeExt = new CANSparkMax(8, MotorType.kBrushless);
+    mIntakeSpin = new CANSparkMax(9, MotorType.kBrushless);
+    mTunnelSpin = new CANSparkMax(10, MotorType.kBrushless);
+
+    mIntakeExt.setSmartCurrentLimit(40);
+    mIntakeSpin.setSmartCurrentLimit(40);
+    mTunnelSpin.setSmartCurrentLimit(40);
+    mIntakeExt.setIdleMode(CANSparkMax.IdleMode.kBrake);
+    mIntakeSpin.setIdleMode(CANSparkMax.IdleMode.kCoast);
+    mTunnelSpin.setIdleMode(CANSparkMax.IdleMode.kCoast);
+
+    mIntakeExt.burnFlash();
+    mIntakeSpin.burnFlash();
+    mTunnelSpin.burnFlash();
 
     // GPM Motors
     mArm = new CANSparkMax(6, MotorType.kBrushless);
@@ -181,7 +228,11 @@ public class Robot extends TimedRobot {
     mCurrentAngle = mGyro.getAngle();
     SmartDashboard.putNumber("Gyro", mCurrentAngle);
 
+    mAutonSwitch = !mSwitch.get(); // decide which direction we want to be true after instillation
+
     // push values to dashboard here
+    SmartDashboard.putBoolean("AutonSwitch", mAutonSwitch);
+    SmartDashboard.putNumber("Intake", mIntakeExtEncoder.getPosition());  
     SmartDashboard.putNumber("[DT] LT-EncPos", mLeftEncoder.getPosition());
     SmartDashboard.putNumber("[DT] RT-EncPos", mRightEncoder.getPosition());
     SmartDashboard.putNumber("Arm", mArmEncoder.getPosition());   
@@ -209,6 +260,7 @@ public class Robot extends TimedRobot {
     mRightEncoder.setPosition(0);
     mLeftEncoder.setPosition(0);
     mArmEncoder.setPosition(0);
+    mIntakeExtEncoder.setPosition(0);
     autonStartTime = Timer.getFPGATimestamp();
 
     mArmGoToMAX = false;
@@ -219,6 +271,13 @@ public class Robot extends TimedRobot {
     autoGPrelease = false;
     autoArmRetract = false;
     autoMove = false;
+    autonIntakeExtend = false;
+    autoCubeTurn = false;
+    autoIntoCube = false;
+    autoCubeNodeTurn = false;
+    autoAtCubeNode = false;
+    autoGPrelease2 = false;
+    autoIntakeIn = false;
 
     mGyro.reset();
   }
@@ -238,80 +297,210 @@ public class Robot extends TimedRobot {
   * move back
   * 
   */
-
-    if (!autoArmExtend){
-      if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 3)) {
-        mArm.set(speedOut);
+    if (!mAutonSwitch) { // normal auto (cone and leave community)
+      if (!autoArmExtend){
+        if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 3)) {
+          mArm.set(speedOut);
+        }
+        else {
+          mArm.stopMotor();
+          autoArmExtend = true;
+          autonGPreleaseTime= Timer.getFPGATimestamp();
+        }
       }
-      else {
-        mArm.stopMotor();
-        autoArmExtend = true;
-        autonGPreleaseTime= Timer.getFPGATimestamp();
-      }
-    }
 
-    if (!autoGPrelease && autoArmExtend) {
-        mGrabber.set(0.35);
-        if ((autonCurrentTime - autonGPreleaseTime) >= 1){
+      if (!autoGPrelease && autoArmExtend) {
+          mGrabber.set(0.35);
+          if ((autonCurrentTime - autonGPreleaseTime) >= 1){
+            mGrabber.stopMotor();
+            autoGPrelease = true;
+          }
+      }
+
+      if (!autoArmRetract && autoGPrelease) {
+        if (mArmEncoder.getPosition() < closedArm) {
+          mArm.set(speedIn);
+        }
+        else {
+          mArm.stopMotor();
+          autoArmRetract = true;
+        }
+      }
+
+      if (!autoMove && autoArmRetract) {
+        // move at least X" backwards (negative position)
+        if (mLeftEncoder.getPosition() > autonFinalPos) {
+          mRobotDrive.arcadeDrive(-0.5, 0);
+        } else {
+          mRobotDrive.arcadeDrive(0, 0);
+        }
+      } else {
+      mRobotDrive.arcadeDrive(0, 0);
+      }
+  
+    } else { // super auto
+      if (!autoArmExtend){
+        if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 2.75)) {
+          mArm.set(speedOut);
+        }
+        else {
+          mArm.stopMotor();
+          autoArmExtend = true;
+          autonGPreleaseTime= Timer.getFPGATimestamp();
+        }
+      }
+
+      if (!autoGPrelease && autoArmExtend) {
+          mGrabber.set(0.35);
+          if ((autonCurrentTime - autonGPreleaseTime) >= 0.75){
+            mGrabber.stopMotor();
+            autoGPrelease = true;
+          }
+      }
+
+      if (!autoArmRetract && autoGPrelease) {
+        if (mArmEncoder.getPosition() < closedArm) {
+          mArm.set(speedIn);
+        }
+        else {
+          mArm.stopMotor();
+          autoArmRetract = true;
+        }
+      }
+
+      if (!autoMove && autoGPrelease) {
+        // move at least X" backwards (negative position)
+        if (mLeftEncoder.getPosition() > autonCubePos) {
+          mRobotDrive.arcadeDrive(-0.65, 0);
+        } else {
+          mRobotDrive.arcadeDrive(0, 0);
+          autoMove = true;
+        }
+      } 
+      
+      if (!autonIntakeExtend && autoArmRetract) {
+        if (mIntakeExtEncoder.getPosition() < intakeOut) {
+          mIntakeExt.set(.25);
+        }
+        else {
+          mIntakeExt.stopMotor();
+          autonIntakeExtend = true;
+        }
+      }
+
+      if (!autoCubeTurn && autoMove) {
+        // move at least X" backwards (negative position)
+        if (gryoCubeAngle >= mCurrentAngle){
+          mRobotDrive.arcadeDrive(0, 0.65);
+        } else {
+          mRobotDrive.arcadeDrive(0, 0);
+          mLeftEncoder.setPosition(0);
+          mRightEncoder.setPosition(0);
+          autoCubeTurn = true;
+        }
+      }
+
+      if (!autoIntoCube && autoCubeTurn) {
+        if (mLeftEncoder.getPosition() > autonIntoCubePos) {
+          mRobotDrive.arcadeDrive(-0.4, 0);
+          mIntakeSpin.set(.5);
+          mTunnelSpin.set(.5);
+          mGrabber.set(.35);
+        } else {
+          mRobotDrive.arcadeDrive(0, 0);
+          mGyro.reset();
+          autoIntoCube = true;
+        }
+      }
+
+      if (!autoCubeNodeTurn && autoIntoCube) {
+        if (gryoCubeNodeAngle <= mCurrentAngle) {
+          mRobotDrive.arcadeDrive(0, -0.5);
+        } else {
+          mRobotDrive.arcadeDrive(0, 0);
+          mIntakeSpin.set(0);
+          mTunnelSpin.set(0);
+          mGrabber.set(0);
+          mLeftEncoder.setPosition(0);
+          mRightEncoder.setPosition(0);
+          autoCubeNodeTurn = true;
+        }
+      }
+
+      if (!autoIntakeIn && autoCubeNodeTurn) {
+        if (mIntakeExtEncoder.getPosition() < closedIntake) {
+          mIntakeExt.set(-0.25);
+        } else {
+          mIntakeExt.set(0);
+          mArmEncoder.setPosition(0);
+          autonArmOutTime = Timer.getFPGATimestamp();
+          autoIntakeIn = true;
+        }
+      }
+
+      if (!autoAtCubeNode && autoIntakeIn) {
+        if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonArmOutTime <= 2.75)) {
+          mArm.set(speedOut);
+        }
+        else {
+          mArm.stopMotor();
+          autoArmExtend = true;
+        }
+      }
+
+      if (!autoAtCubeNode && autoCubeNodeTurn) {
+        if (mLeftEncoder.getPosition() < autoCubeNodePos) {
+          mRobotDrive.arcadeDrive(0.65, 0);
+        } else {
+          autonGPreleaseTime2 = Timer.getFPGATimestamp();
+          mRobotDrive.arcadeDrive(0, 0);
+          autoAtCubeNode = true;
+        }
+      }
+      
+      if (!autoGPrelease2 && autoAtCubeNode) {
+        mGrabber.set(-0.35);
+        if ((autonCurrentTime - autonGPreleaseTime2) >= 0.75){
           mGrabber.stopMotor();
           autoGPrelease = true;
         }
-    }
-
-    if (!autoArmRetract && autoGPrelease) {
-      if (mArmEncoder.getPosition() < closedArm) {
-        mArm.set(speedIn);
-      }
-      else {
-        mArm.stopMotor();
-        autoArmRetract = true;
-      }
-    }
-
-    if (!autoMove && autoArmRetract) {
-       // move at least X" backwards (negative position)
-      if (mLeftEncoder.getPosition() > autonFinalPos) {
-        mRobotDrive.arcadeDrive(-0.5, 0);
       } else {
         mRobotDrive.arcadeDrive(0, 0);
       }
-    } else {
-     mRobotDrive.arcadeDrive(0, 0);
-    }
- 
-    } // not past wait time
-    else {
-      mRobotDrive.arcadeDrive(0, 0);
-    }
- 
-  } //end routine
 
-  /** This function is called once when teleop is enabled. */
-  @Override
-  public void teleopInit() {
-    mRightEncoder.setPosition(0);
-    mLeftEncoder.setPosition(0);
-    mArmEncoder.setPosition(0);
+    }
 
-    mArm.stopMotor();
-    mGrabber.stopMotor();
+  } else {
     mRobotDrive.arcadeDrive(0, 0);
-
-    mArmGoToMAX = false;
-    mArmGoToMID = false;
-    mArmGoToHOME = false;
+  }
   
-    mLeftDriveMotor1.setIdleMode(CANSparkMax.IdleMode.kCoast);
-    mLeftDriveMotor2.setIdleMode(CANSparkMax.IdleMode.kCoast);
-    mRightDriveMotor1.setIdleMode(CANSparkMax.IdleMode.kCoast);
-    mRightDriveMotor2.setIdleMode(CANSparkMax.IdleMode.kCoast);
+    } //end routine
 
-    mLeftDriveMotor1.burnFlash();
-    mLeftDriveMotor2.burnFlash();
-    mRightDriveMotor1.burnFlash();
-    mRightDriveMotor2.burnFlash();
+    /** This function is called once when teleop is enabled. */
+    @Override
+    public void teleopInit() {
+      mRightEncoder.setPosition(0);
+      mLeftEncoder.setPosition(0);
+      mArmEncoder.setPosition(0);
 
-    setMotorsToBrake = false;
+      mArm.stopMotor();
+      mGrabber.stopMotor();
+      mRobotDrive.arcadeDrive(0, 0);
+
+      mArmGoToMAX = false;
+      mArmGoToMID = false;
+      mArmGoToHOME = false;
+    
+      mLeftDriveMotor1.setIdleMode(CANSparkMax.IdleMode.kCoast);
+      mLeftDriveMotor2.setIdleMode(CANSparkMax.IdleMode.kCoast);
+      mRightDriveMotor1.setIdleMode(CANSparkMax.IdleMode.kCoast);
+      mRightDriveMotor2.setIdleMode(CANSparkMax.IdleMode.kCoast);
+
+      mLeftDriveMotor1.burnFlash();
+      mLeftDriveMotor2.burnFlash();
+      mRightDriveMotor1.burnFlash();
+      mRightDriveMotor2.burnFlash();
+
     mGyro.reset();
   }
 
@@ -445,6 +634,13 @@ public class Robot extends TimedRobot {
     autoGPrelease = false;
     autoArmRetract = false;
     autoMove = false;
+    autonIntakeExtend = false;
+    autoCubeTurn = false;
+    autoIntoCube = false;
+    autoCubeNodeTurn = false;
+    autoAtCubeNode = false;
+    autoGPrelease2 = false;
+    autoIntakeIn = false;
   }
 
   /** This function is called periodically when disabled. */
@@ -460,6 +656,12 @@ public class Robot extends TimedRobot {
     autoGPrelease = false;
     autoArmRetract = false;
     autoMove = false;
- 
+    autonIntakeExtend = false;
+    autoCubeTurn = false;
+    autoIntoCube = false;
+    autoCubeNodeTurn = false;
+    autoAtCubeNode = false;
+    autoGPrelease2 = false;
+    autoIntakeIn = false;
   }
 }
