@@ -267,6 +267,7 @@ public class Robot extends TimedRobot {
     autoCubeNodeTurn = false;
     autoAtCubeNode = false;
     autoGPrelease2 = false;
+    autoIntakeIn = false;
 
     mGyro.reset();
   }
@@ -628,6 +629,7 @@ public class Robot extends TimedRobot {
     autoCubeNodeTurn = false;
     autoAtCubeNode = false;
     autoGPrelease2 = false;
+    autoIntakeIn = false;
   }
 
   /** This function is called periodically when disabled. */
@@ -649,5 +651,6 @@ public class Robot extends TimedRobot {
     autoCubeNodeTurn = false;
     autoAtCubeNode = false;
     autoGPrelease2 = false;
+    autoIntakeIn = false;
   }
 }
