@@ -67,6 +67,7 @@ public class Robot extends TimedRobot {
   public double rWidth = 2; // robot width in inches
 
   public double intakeOut = 30; // encoder value at full extension for arm (guess) --> find real val
+  public double closedIntake = 1;
 
   public double maxArm = -40; // encoder value at full extension for arm
   public double midArm = -25; // encoder value at mid extension for arm
@@ -98,6 +99,8 @@ public class Robot extends TimedRobot {
   public boolean autoAtCubeNode = false;
   public double autonGPreleaseTime2;
   public boolean autoGPrelease2 = false;
+  public boolean autoIntakeIn = false;
+  public double autonArmOutTime;
 
   public String desiredColor;
   public double matchTimer;
@@ -410,6 +413,27 @@ public class Robot extends TimedRobot {
           mLeftEncoder.setPosition(0);
           mRightEncoder.setPosition(0);
           autoCubeNodeTurn = true;
+        }
+      }
+
+      if (!autoIntakeIn && autoCubeNodeTurn) {
+        if (mIntakeExtEncoder.getPosition() < closedIntake) {
+          mIntakeExt.set(-0.25);
+        } else {
+          mIntakeExt.set(0);
+          mArmEncoder.setPosition(0);
+          autonArmOutTime = Timer.getFPGATimestamp();
+          autoIntakeIn = true;
+        }
+      }
+
+      if (!autoAtCubeNode && autoIntakeIn) {
+        if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonArmOutTime <= 2.75)) {
+          mArm.set(speedOut);
+        }
+        else {
+          mArm.stopMotor();
+          autoArmExtend = true;
         }
       }
 
