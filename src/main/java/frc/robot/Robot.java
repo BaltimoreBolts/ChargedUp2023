@@ -36,6 +36,9 @@ public class Robot extends TimedRobot {
   public DigitalInput mSwitch;
   public boolean mAutonSwitch;
 
+  public DigitalInput mSwitch2;
+  public boolean mAutonSwitch2;
+
   public CANSparkMax mLeftDriveMotor1;
   public CANSparkMax mRightDriveMotor1;
   public CANSparkMax mLeftDriveMotor2;
@@ -83,11 +86,14 @@ public class Robot extends TimedRobot {
   public double autonCurrentTime;
   public double autonGPreleaseTime; 
   public double autonFinalPos = -160; //-160  inches to drive backwards
+  public double autonFinalPark = -68; // distance to park or posibly engage
   public double autonCubePos = -170; //-180  inches to drive backwards
   public double autoCubeNodePos = 189; //189  inches to cube node
   public double autonIntoCubePos = -25;
-  public double gryoCubeAngle = 40; // turn to face cube
-  public double gryoCubeNodeAngle = -40; // turn to face cube node
+  public double gryoCubeAngleRED = 40; // turn to face cube
+  public double gryoCubeNodeAngleRED = -40; // turn to face cube node
+  public double gryoCubeAngleBLUE = -40; // turn to face cube
+  public double gryoCubeNodeAngleBLUE = 40; // turn to face cube node
   public boolean autoArmExtend = false;
   public boolean autoGPrelease = false;
   public boolean autoArmRetract = false;
@@ -103,6 +109,7 @@ public class Robot extends TimedRobot {
   public double autonArmOutTime;
 
   public String desiredColor;
+  public String autonRoutine;
   public double matchTimer;
   public double mCurrentAngle;
 
@@ -126,6 +133,7 @@ public class Robot extends TimedRobot {
     }
 
     mSwitch = new DigitalInput(3); // change channel after instillation 
+    mSwitch = new DigitalInput(4);
     
     // Drive Motors
     mLeftDriveMotor1 = new CANSparkMax(5, MotorType.kBrushless);
@@ -218,10 +226,22 @@ public class Robot extends TimedRobot {
     mCurrentAngle = mGyro.getAngle();
     SmartDashboard.putNumber("Gyro", mCurrentAngle);
 
-    mAutonSwitch = !mSwitch.get(); // decide which direction we want to be true after instillation
+    mAutonSwitch = mSwitch.get(); // decide which direction we want to be true after instillation
+    mAutonSwitch2 = mSwitch2.get();
+
+    if (mAutonSwitch && mAutonSwitch2){
+      autonRoutine = "Blue - 2 Game Piece Auto";
+    } else if (mAutonSwitch && !mAutonSwitch2){
+      autonRoutine = "Red - 2 Game Piece Auto";
+    } else if (!mAutonSwitch && mAutonSwitch2){
+      autonRoutine = "Cone and Park/Engage Auto";
+    } else {
+      autonRoutine = "Cone and Mobility Auto";
+    }
 
     // push values to dashboard here
     SmartDashboard.putBoolean("AutonSwitch", mAutonSwitch);
+    SmartDashboard.putBoolean("AutonSwitch2", mAutonSwitch2);
     SmartDashboard.putNumber("Intake", mIntakeExtEncoder.getPosition());  
     SmartDashboard.putNumber("[DT] LT-EncPos", mLeftEncoder.getPosition());
     SmartDashboard.putNumber("[DT] RT-EncPos", mRightEncoder.getPosition());
@@ -229,6 +249,7 @@ public class Robot extends TimedRobot {
     SmartDashboard.putBoolean("maxArm", mArmGoToMAX);
     SmartDashboard.putBoolean("midArm", mArmGoToMID);
     SmartDashboard.putBoolean("homeArm", mArmGoToHOME);
+    SmartDashboard.putString("Auto Routine", autonRoutine);
 
     matchTimer = DriverStation.getMatchTime();
     SmartDashboard.putNumber("MatchTime", matchTimer);
@@ -317,9 +338,18 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if (!autoMove && autoArmRetract) {
+      if (!autoMove && autoArmRetract && !mAutonSwitch2) {
         // move at least X" backwards (negative position)
         if (mLeftEncoder.getPosition() > autonFinalPos) {
+          mRobotDrive.arcadeDrive(-0.5, 0);
+        } else {
+          mRobotDrive.arcadeDrive(0, 0);
+        }
+      } 
+
+      if (!autoMove && autoArmRetract && !mAutonSwitch2) {
+        // move at least X" backwards (negative position)
+        if (mLeftEncoder.getPosition() > autonFinalPark) {
           mRobotDrive.arcadeDrive(-0.5, 0);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
@@ -378,9 +408,21 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if (!autoCubeTurn && autoMove) {
+      if (!autoCubeTurn && autoMove && !mAutonSwitch2) {
         // move at least X" backwards (negative position)
-        if (gryoCubeAngle >= mCurrentAngle){
+        if (gryoCubeAngleRED >= mCurrentAngle){
+          mRobotDrive.arcadeDrive(0, 0.65);
+        } else {
+          mRobotDrive.arcadeDrive(0, 0);
+          mLeftEncoder.setPosition(0);
+          mRightEncoder.setPosition(0);
+          autoCubeTurn = true;
+        }
+      }
+
+      if (!autoCubeTurn && autoMove && mAutonSwitch2) {
+        // move at least X" backwards (negative position)
+        if (gryoCubeAngleBLUE >= mCurrentAngle){
           mRobotDrive.arcadeDrive(0, 0.65);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
@@ -403,8 +445,22 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if (!autoCubeNodeTurn && autoIntoCube) {
-        if (gryoCubeNodeAngle <= mCurrentAngle) {
+      if (!autoCubeNodeTurn && autoIntoCube && !mAutonSwitch2) {
+        if (gryoCubeNodeAngleRED <= mCurrentAngle) {
+          mRobotDrive.arcadeDrive(0, -0.5);
+        } else {
+          mRobotDrive.arcadeDrive(0, 0);
+          mIntakeSpin.set(0);
+          mTunnelSpin.set(0);
+          mGrabber.set(0);
+          mLeftEncoder.setPosition(0);
+          mRightEncoder.setPosition(0);
+          autoCubeNodeTurn = true;
+        }
+      }
+
+      if (!autoCubeNodeTurn && autoIntoCube && mAutonSwitch2) {
+        if (gryoCubeNodeAngleBLUE <= mCurrentAngle) {
           mRobotDrive.arcadeDrive(0, -0.5);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
