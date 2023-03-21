@@ -73,12 +73,14 @@ public class Robot extends TimedRobot {
 
   public double intakeOut = 30; // encoder value at full extension for arm (guess) --> find real val
   public double closedIntake = 1;
+  public boolean intakeExtend = false;
 
   public double maxArm = -40; // encoder value at full extension for arm
   public double midArm = -25; // encoder value at mid extension for arm
   public double closedArm = 1; // encoder value at full retraction for arm 
   public double speedOut = -0.25;
   public double speedIn = 0.25;
+  public double armStartTime;
   public boolean mArmGoToMAX = false;
   public boolean mArmGoToMID = false;
   public boolean mArmGoToHOME = false;
@@ -303,6 +305,7 @@ public class Robot extends TimedRobot {
     autoAtCubeNode = false;
     autoGPrelease2 = false;
     autoIntakeIn = false;
+    intakeExtend = false;
 
     mGyro.reset();
   }
@@ -646,6 +649,9 @@ public class Robot extends TimedRobot {
     */
 
     if ((mXbox.getPOV()==0) || mArmGoToMAX){  //Extend arm to MAX
+      if(mXbox.getPOV()==0){
+        armStartTime = Timer.getFPGATimestamp();
+      }
       mArmGoToMAX = true;
       if (mArmEncoder.getPosition() > maxArm) {
         mArm.set(speedOut);
@@ -657,9 +663,15 @@ public class Robot extends TimedRobot {
       if (mArmEncoder.getPosition() <= (maxArm)) {
         mArmGoToMAX = false;
       }
+      if((Timer.getFPGATimestamp()-armStartTime) >= 2.5){
+        mArmGoToMAX = false;
+      }
     }
     else if ((mXbox.getPOV()==90) || (mXbox.getPOV()==270) || mArmGoToMID) {  //Extend arm to MID
       mArmGoToMID = true;
+      if((mXbox.getPOV()==90) || (mXbox.getPOV()==270)){
+        armStartTime = Timer.getFPGATimestamp();
+      }
       if (mArmEncoder.getPosition() > midArm+5) {
         mArm.set(speedOut);
       }
@@ -672,10 +684,20 @@ public class Robot extends TimedRobot {
       if ((mArmEncoder.getPosition() <= (midArm+5)) && (mArmEncoder.getPosition() >= (midArm-5))) {
         mArmGoToMID = false;
       }
+      if((Timer.getFPGATimestamp()-armStartTime) >= 2.5){
+        mArmGoToMID = false;
+      }
     }
     else if ((mXbox.getPOV()==180) || mArmGoToHOME) {  // Retract Arm fully
+      mArmGoToHOME = true;
+      if(mXbox.getPOV()==180){
+        armStartTime = Timer.getFPGATimestamp();
+      }
       if (mArmEncoder.getPosition() < closedArm) {
         mArm.set(speedIn);
+      }
+      if((Timer.getFPGATimestamp()-armStartTime) >= 2.5){
+        mArmGoToHOME = false;
       }
       else {
         mArm.stopMotor();
@@ -696,6 +718,19 @@ public class Robot extends TimedRobot {
       mArmGoToMID = false;
       mArmGoToMAX = false;
       mArmGoToHOME = false;
+    }
+
+    if (mXbox.getXButton() || intakeExtend){
+      intakeExtend = true;
+      if (mIntakeExtEncoder.getPosition() < intakeOut) {
+        mIntakeExt.set(.125);
+      }
+      else {
+        mIntakeExt.stopMotor();
+      }
+      if (mIntakeExtEncoder.getPosition() >= (intakeOut)) {
+        intakeExtend = false;
+      }
     }
 
   }
@@ -719,6 +754,7 @@ public class Robot extends TimedRobot {
     autoAtCubeNode = false;
     autoGPrelease2 = false;
     autoIntakeIn = false;
+    intakeExtend = false;
   }
 
   /** This function is called periodically when disabled. */
@@ -741,5 +777,6 @@ public class Robot extends TimedRobot {
     autoAtCubeNode = false;
     autoGPrelease2 = false;
     autoIntakeIn = false;
+    intakeExtend = false;
   }
 }
