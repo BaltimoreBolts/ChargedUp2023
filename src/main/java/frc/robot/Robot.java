@@ -743,7 +743,7 @@ public class Robot extends TimedRobot {
         mIntakeExt.stopMotor();
       }
       if (mIntakeExtEncoder.getPosition() <= (closedIntake)) {
-        intakeExtend = false;
+        intakeIn = false;
       }
     }
     else {
