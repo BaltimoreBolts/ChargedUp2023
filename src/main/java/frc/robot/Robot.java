@@ -74,6 +74,7 @@ public class Robot extends TimedRobot {
   public double intakeOut = 30; // encoder value at full extension for arm (guess) --> find real val
   public double closedIntake = 1;
   public boolean intakeExtend = false;
+  public boolean intakeIn = false;
 
   public double maxArm = -40; // encoder value at full extension for arm
   public double midArm = -25; // encoder value at mid extension for arm
@@ -306,6 +307,7 @@ public class Robot extends TimedRobot {
     autoGPrelease2 = false;
     autoIntakeIn = false;
     intakeExtend = false;
+    intakeIn = false;
 
     mGyro.reset();
   }
@@ -732,6 +734,23 @@ public class Robot extends TimedRobot {
         intakeExtend = false;
       }
     }
+    else if (mXbox.getBButton() || intakeIn){
+      intakeIn = true;
+      if (mIntakeExtEncoder.getPosition() > closedIntake) {
+        mIntakeExt.set(-.125);
+      }
+      else {
+        mIntakeExt.stopMotor();
+      }
+      if (mIntakeExtEncoder.getPosition() <= (closedIntake)) {
+        intakeExtend = false;
+      }
+    }
+    else {
+      mIntakeExt.stopMotor();
+      intakeExtend = false;
+      intakeIn = false;
+    }
 
   }
   /** This function is called once when the robot is disabled. */
@@ -755,6 +774,7 @@ public class Robot extends TimedRobot {
     autoGPrelease2 = false;
     autoIntakeIn = false;
     intakeExtend = false;
+    intakeIn = false;
   }
 
   /** This function is called periodically when disabled. */
@@ -778,5 +798,6 @@ public class Robot extends TimedRobot {
     autoGPrelease2 = false;
     autoIntakeIn = false;
     intakeExtend = false;
+    intakeIn = false;
   }
 }
