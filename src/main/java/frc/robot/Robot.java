@@ -617,7 +617,8 @@ public class Robot extends TimedRobot {
     if (mStick.getRawButton(12)) {
       mRightEncoder.setPosition(0);
       mLeftEncoder.setPosition(0);
-      mArmEncoder.setPosition(0);   
+      mArmEncoder.setPosition(0);
+      mIntakeExtEncoder.setPosition(0);
       mGyro.reset();
     }
 
@@ -749,7 +750,7 @@ public class Robot extends TimedRobot {
     if (mXbox.getXButton() || intakeExtend){
       intakeExtend = true;
       if (mIntakeExtEncoder.getPosition() < intakeOut) {
-        mIntakeExt.set(.125);
+        mIntakeExt.set(.375);
       }
       else {
         mIntakeExt.stopMotor();
@@ -761,7 +762,7 @@ public class Robot extends TimedRobot {
     else if (mXbox.getBButton() || intakeIn){
       intakeIn = true;
       if (mIntakeExtEncoder.getPosition() > closedIntake) {
-        mIntakeExt.set(-.125);
+        mIntakeExt.set(-.375);
       }
       else {
         mIntakeExt.stopMotor();
