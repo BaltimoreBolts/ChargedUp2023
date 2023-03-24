@@ -260,7 +260,6 @@ public class Robot extends TimedRobot {
     /* 
     mAutonSwitch = mSwitch.get(); // decide which direction we want to be true after instillation
     mAutonSwitch2 = mSwitch2.get();
-
     if (mAutonSwitch && mAutonSwitch2){
       autonRoutine = "Blue - 2 Game Piece Auto";
     } else if (mAutonSwitch && !mAutonSwitch2){
