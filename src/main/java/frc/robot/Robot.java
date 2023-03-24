@@ -192,9 +192,6 @@ public class Robot extends TimedRobot {
     mLeftEncoder = mLeftDriveMotor1.getEncoder();
     mRightEncoder = mRightDriveMotor1.getEncoder();
 
-    mIntakeExtEncoder = mIntakeExt.getEncoder();
-
-
     // Convert raw encoder units to inches using PIxdia/gearRatio
     mLeftEncoder.setPositionConversionFactor((Math.PI * wheelDia) / gearRatio);
     mRightEncoder.setPositionConversionFactor((Math.PI * wheelDia) / gearRatio);
@@ -221,6 +218,8 @@ public class Robot extends TimedRobot {
     mIntakeExt.setIdleMode(CANSparkMax.IdleMode.kBrake);
     mIntakeSpin.setIdleMode(CANSparkMax.IdleMode.kCoast);
     mTunnelSpin.setIdleMode(CANSparkMax.IdleMode.kCoast);
+
+    mIntakeExtEncoder = mIntakeExt.getEncoder();
 
     mIntakeExt.burnFlash();
     mIntakeSpin.burnFlash();
@@ -270,6 +269,7 @@ public class Robot extends TimedRobot {
       autonRoutine = "Cone and Mobility Auto";
     }
     */
+    autonRoutine = "test";
 
     // push values to dashboard here
     //SmartDashboard.putBoolean("AutonSwitch", mAutonSwitch);
@@ -613,7 +613,7 @@ public class Robot extends TimedRobot {
      mRobotDrive.arcadeDrive(mSpeed, -mTwist);   
 
     // Reset encoders and gyro
-    if (mStick.getRawButton(12)) {
+    if ((mStick.getRawButton(12))){
       mRightEncoder.setPosition(0);
       mLeftEncoder.setPosition(0);
       mArmEncoder.setPosition(0);
@@ -621,7 +621,7 @@ public class Robot extends TimedRobot {
       mGyro.reset();
     }
 
-    if (mStick.getRawButton(1)) {
+    if ((mStick.getRawButton(1)) || (mStick.getRawButton(3))) {
       intakeStartTime = Timer.getFPGATimestamp();
       intaking = true;
     }
