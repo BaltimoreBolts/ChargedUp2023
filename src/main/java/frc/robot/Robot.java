@@ -211,8 +211,8 @@ public class Robot extends TimedRobot {
     setMotorsToBrake = false;
 
     // Intake And Tunnel
-    mIntakeExt = new CANSparkMax(8, MotorType.kBrushless);
-    mIntakeSpin = new CANSparkMax(9, MotorType.kBrushless);
+    mIntakeExt = new CANSparkMax(9, MotorType.kBrushless);
+    mIntakeSpin = new CANSparkMax(8, MotorType.kBrushless);
     mTunnelSpin = new CANSparkMax(10, MotorType.kBrushless);
 
     mIntakeExt.setSmartCurrentLimit(40);
