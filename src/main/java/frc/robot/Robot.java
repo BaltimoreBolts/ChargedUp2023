@@ -660,6 +660,8 @@ public class Robot extends TimedRobot {
     }    
     else {
       mGrabber.stopMotor();
+      mIntakeSpin.stopMotor();
+      mTunnelSpin.stopMotor();
     }
 
     //Arm control
@@ -749,7 +751,7 @@ public class Robot extends TimedRobot {
     if (mXbox.getXButton() || intakeExtend){
       intakeExtend = true;
       if (mIntakeExtEncoder.getPosition() < intakeOut) {
-        mIntakeExt.set(.375);
+        mIntakeExt.set(.125);
       }
       else {
         mIntakeExt.stopMotor();
@@ -761,7 +763,7 @@ public class Robot extends TimedRobot {
     else if (mXbox.getBButton() || intakeIn){
       intakeIn = true;
       if (mIntakeExtEncoder.getPosition() > closedIntake) {
-        mIntakeExt.set(-.375);
+        mIntakeExt.set(-.125);
       }
       else {
         mIntakeExt.stopMotor();
