@@ -9,9 +9,10 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.RelativeEncoder;
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.DigitalInput;
+//import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.Timer;
@@ -35,11 +36,18 @@ public class Robot extends TimedRobot {
 
   public AHRS mGyro;
 
-  public DigitalInput mSwitch;
-  public boolean mAutonSwitch;
+  //public DigitalInput mSwitch;
+  //public boolean mAutonSwitch;
 
-  public DigitalInput mSwitch2;
-  public boolean mAutonSwitch2;
+  //public DigitalInput mSwitch2;
+  //public boolean mAutonSwitch2;
+  
+  public static final String kConeAuto = "Normal Cone auto";
+  public static final String kConeParkAuto = "Cone and Park Auto";
+  public static final String kBlue2Auto = "Blue 2 piece Auto";
+  public static final String kRed2Auto = "Red 2 piece Auto";
+  public String m_autoSelected;
+  public final SendableChooser <String> m_chooser = new SendableChooser <> ();
 
   public CANSparkMax mLeftDriveMotor1;
   public CANSparkMax mRightDriveMotor1;
@@ -71,7 +79,7 @@ public class Robot extends TimedRobot {
   public double gearRatio = 8.45; // Toughbox Mini
   public double rWidth = 2; // robot width in inches
 
-  public double intakeOut = 30; // encoder value at full extension for arm (guess) --> find real val
+  public double intakeOut = 10; // encoder value at full extension for arm (guess) --> find real val
   public double closedIntake = 1;
   public boolean intakeExtend = false;
   public boolean intakeIn = false;
@@ -99,10 +107,10 @@ public class Robot extends TimedRobot {
   public double autonCubePos = -170; //-180  inches to drive backwards
   public double autoCubeNodePos = 189; //189  inches to cube node
   public double autonIntoCubePos = -25;
-  public double gryoCubeAngleRED = 40; // turn to face cube
-  public double gryoCubeNodeAngleRED = -40; // turn to face cube node
-  public double gryoCubeAngleBLUE = -40; // turn to face cube
-  public double gryoCubeNodeAngleBLUE = 40; // turn to face cube node
+  public double gryoCubeAngleRED = -40; // turn to face cube
+  public double gryoCubeNodeAngleRED = 40; // turn to face cube node
+  public double gryoCubeAngleBLUE = 40; // turn to face cube
+  public double gryoCubeNodeAngleBLUE = -40; // turn to face cube node
   public boolean autoArmExtend = false;
   public boolean autoGPrelease = false;
   public boolean autoArmRetract = false;
@@ -131,6 +139,12 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit() {
 
+    m_chooser.setDefaultOption("Default Auto", kConeAuto);
+    m_chooser.addOption("My Auto", kConeParkAuto);
+    m_chooser.addOption("My Auto", kBlue2Auto);
+    m_chooser.addOption("My Auto", kRed2Auto);
+    SmartDashboard.putData("Auto choices", m_chooser);
+
     // Open USB Camera
     fishEye = CameraServer.startAutomaticCapture();
     fishEye.setVideoMode(PixelFormat.kYUYV, 320, 240, 30);
@@ -148,8 +162,8 @@ public class Robot extends TimedRobot {
       DriverStation.reportError("Error instantiating navX MXP: " + ex.getMessage(), true);
     }
 
-    mSwitch = new DigitalInput(3); // change channel after instillation 
-    mSwitch = new DigitalInput(4);
+    //mSwitch = new DigitalInput(3); // change channel after instillation 
+    //mSwitch = new DigitalInput(4);
     
     // Drive Motors
     mLeftDriveMotor1 = new CANSparkMax(5, MotorType.kBrushless);
@@ -243,6 +257,7 @@ public class Robot extends TimedRobot {
     mCurrentAngle = mGyro.getAngle();
     SmartDashboard.putNumber("Gyro", mCurrentAngle);
 
+    /* 
     mAutonSwitch = mSwitch.get(); // decide which direction we want to be true after instillation
     mAutonSwitch2 = mSwitch2.get();
 
@@ -255,10 +270,11 @@ public class Robot extends TimedRobot {
     } else {
       autonRoutine = "Cone and Mobility Auto";
     }
+    */
 
     // push values to dashboard here
-    SmartDashboard.putBoolean("AutonSwitch", mAutonSwitch);
-    SmartDashboard.putBoolean("AutonSwitch2", mAutonSwitch2);
+    //SmartDashboard.putBoolean("AutonSwitch", mAutonSwitch);
+    //SmartDashboard.putBoolean("AutonSwitch2", mAutonSwitch2);
     SmartDashboard.putNumber("Intake", mIntakeExtEncoder.getPosition());  
     SmartDashboard.putNumber("[DT] LT-EncPos", mLeftEncoder.getPosition());
     SmartDashboard.putNumber("[DT] RT-EncPos", mRightEncoder.getPosition());
@@ -284,6 +300,8 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousInit() {
+
+    m_autoSelected = m_chooser.getSelected();
 
     mRightEncoder.setPosition(0);
     mLeftEncoder.setPosition(0);
@@ -327,7 +345,7 @@ public class Robot extends TimedRobot {
   * move back
   * 
   */
-    if (!mAutonSwitch) { // normal auto (cone and leave community)
+    if ((m_autoSelected == kConeAuto) || (m_autoSelected == kConeParkAuto)) { // normal auto (cone and leave community)
       if (!autoArmExtend){
         if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 3)) {
           mArm.set(speedOut);
@@ -357,7 +375,7 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if (!autoMove && autoArmRetract && !mAutonSwitch2) {
+      if (!autoMove && autoArmRetract && (m_autoSelected == kConeParkAuto)) {
         // move at least X" backwards (negative position)
         if (mLeftEncoder.getPosition() > autonFinalPos) {
           mRobotDrive.arcadeDrive(-0.5, 0);
@@ -366,7 +384,7 @@ public class Robot extends TimedRobot {
         }
       } 
 
-      if (!autoMove && autoArmRetract && !mAutonSwitch2) {
+      if (!autoMove && autoArmRetract && (m_autoSelected == kConeAuto)) {
         // move at least X" backwards (negative position)
         if (mLeftEncoder.getPosition() > autonFinalPark) {
           mRobotDrive.arcadeDrive(-0.5, 0);
@@ -427,10 +445,10 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if (!autoCubeTurn && autoMove && !mAutonSwitch2) {
+      if (!autoCubeTurn && autoMove && (m_autoSelected == kRed2Auto)) {
         // move at least X" backwards (negative position)
-        if (gryoCubeAngleRED >= mCurrentAngle){
-          mRobotDrive.arcadeDrive(0, 0.4);
+        if (gryoCubeAngleRED <= mCurrentAngle){
+          mRobotDrive.arcadeDrive(0, -0.4);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
           mLeftEncoder.setPosition(0);
@@ -439,7 +457,7 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if (!autoCubeTurn && autoMove && mAutonSwitch2) {
+      if (!autoCubeTurn && autoMove && (m_autoSelected == kBlue2Auto)) {
         // move at least X" backwards (negative position)
         if (gryoCubeAngleBLUE >= mCurrentAngle){
           mRobotDrive.arcadeDrive(0, 0.4);
@@ -464,9 +482,9 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if (!autoCubeNodeTurn && autoIntoCube && !mAutonSwitch2) {
-        if (gryoCubeNodeAngleRED <= mCurrentAngle) {
-          mRobotDrive.arcadeDrive(0, -0.5);
+      if (!autoCubeNodeTurn && autoIntoCube && (m_autoSelected == kRed2Auto)) {
+        if (gryoCubeNodeAngleRED >= mCurrentAngle) {
+          mRobotDrive.arcadeDrive(0, 0.5);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
           mIntakeSpin.set(0);
@@ -478,7 +496,7 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if (!autoCubeNodeTurn && autoIntoCube && mAutonSwitch2) {
+      if (!autoCubeNodeTurn && autoIntoCube && (m_autoSelected == kBlue2Auto)) {
         if (gryoCubeNodeAngleBLUE <= mCurrentAngle) {
           mRobotDrive.arcadeDrive(0, -0.5);
         } else {
@@ -624,12 +642,18 @@ public class Robot extends TimedRobot {
     //Grabber control
     if (mXbox.getLeftBumper()) { //Signal CONE lights
       //light to YELLOW
+      mGrabber.set(-0.35);
+      mIntakeSpin.set(-.5);
+      mTunnelSpin.set(.5);
     }
     else if (mXbox.getLeftTriggerAxis() == 1){ //Pickup CONE
       mGrabber.set(-0.45);
     }
     else if (mXbox.getRightBumper()) { //Signal CUBE lights
       //light to PURPLE
+      mGrabber.set(0.35);
+      mIntakeSpin.set(.5);
+      mTunnelSpin.set(-.5);
     }
     else if (mXbox.getRightTriggerAxis() == 1){ //Pickup CUBE
       mGrabber.set(0.35);
