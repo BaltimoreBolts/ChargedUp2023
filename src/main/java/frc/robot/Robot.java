@@ -102,7 +102,7 @@ public class Robot extends TimedRobot {
   public double autonCurrentTime;
   public double autonGPreleaseTime; 
   public double autonFinalPos = -160; //-160  inches to drive backwards
-  public double autonFinalPark = -68; // distance to park or posibly engage
+  public double autonFinalPark = -74; // distance to park or posibly engage
   public double autonCubePos = -170; //-180  inches to drive backwards
   public double autoCubeNodePos = 189; //189  inches to cube node
   public double autonIntoCubePos = -25;
@@ -391,7 +391,7 @@ public class Robot extends TimedRobot {
       else if (!autoMove && autoArmRetract && (m_autoSelected == kConeParkAuto)) {
         // move at least X" backwards (negative position)
         if (mLeftEncoder.getPosition() > autonFinalPark) {
-          mRobotDrive.arcadeDrive(-0.25, 0);
+          mRobotDrive.arcadeDrive(-0.45, 0);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
         }
@@ -671,80 +671,11 @@ public class Robot extends TimedRobot {
       mTunnelSpin.stopMotor();
     }
 
-    //Arm control
     /*
-    Auto position: 
-      Full Extension = DPad UP
-      Mid Extension = DPad LEFT or RIGHT
-      Full Retract = DPad DOWN  (mXbox.getPOV() == 180)
-      
-    Control
+    Arm Control
       Y button = arm out (hold)
       A button = arm in (hold)
     */
-
-    /*
-    if ((mXbox.getPOV()==0) || mArmGoToMAX){  //Extend arm to MAX
-      if(mXbox.getPOV()==0){
-        armStartTime = Timer.getFPGATimestamp();
-      }
-      mArmGoToMAX = true;
-      if (mArmEncoder.getPosition() > maxArm) {
-        mArm.set(speedOut);
-      }
-      else {
-        mArm.stopMotor();
-      }
-
-      if (mArmEncoder.getPosition() <= (maxArm)) {
-        mArmGoToMAX = false;
-      }
-      if((Timer.getFPGATimestamp()-armStartTime) >= 2.5){
-        mArmGoToMAX = false;
-      }
-    }
-    else if ((mXbox.getPOV()==90) || (mXbox.getPOV()==270) || mArmGoToMID) {  //Extend arm to MID
-      mArmGoToMID = true;
-      if((mXbox.getPOV()==90) || (mXbox.getPOV()==270)){
-        armStartTime = Timer.getFPGATimestamp();
-      }
-      if (mArmEncoder.getPosition() > midArm+5) {
-        mArm.set(speedOut);
-      }
-      else if (mArmEncoder.getPosition() < (midArm-5)) {
-        mArm.set(speedIn);
-      }
-      else {
-        mArm.stopMotor();
-      }
-      if ((mArmEncoder.getPosition() <= (midArm+5)) && (mArmEncoder.getPosition() >= (midArm-5))) {
-        mArmGoToMID = false;
-      }
-      if((Timer.getFPGATimestamp()-armStartTime) >= 2.5){
-        mArmGoToMID = false;
-      }
-    }
-    else if ((mXbox.getPOV()==180) || mArmGoToHOME) {  // Retract Arm fully
-      mArmGoToHOME = true;
-      if(mXbox.getPOV()==180){
-        armStartTime = Timer.getFPGATimestamp();
-      }
-      if (mArmEncoder.getPosition() < closedArm) {
-        mArm.set(speedIn);
-      }
-      if((Timer.getFPGATimestamp()-armStartTime) >= 2.5){
-        mArmGoToHOME = false;
-      }
-      else {
-        mArm.stopMotor();
-        mArmGoToHOME = false;
-      }
-      mArmGoToMID = false;
-      mArmGoToMAX = false;
-      mArmGoToHOME = false;
-    }
-    else
-    */ 
     if (mXbox.getYButton()) { // Move arm out
       mArm.set(speedOut);
     }
@@ -759,6 +690,12 @@ public class Robot extends TimedRobot {
     }
 
     //Intake logic
+    /*
+    Intake control 
+      Intake In = DPad UP
+      Intake Out = DPad DOWN  (mXbox.getPOV() == 180)
+    */
+
     if (mXbox.getXButton() || intakeExtend){
       intakeExtend = true;
       if (mIntakeExtEncoder.getPosition() < intakeOut) {
@@ -779,11 +716,18 @@ public class Robot extends TimedRobot {
         intakeIn = false;
       }
     }
+    else if (mXbox.getPOV()==0) {  //Move Intake IN
+        mIntakeExt.set(-0.1);
+        }
+    else if (mXbox.getPOV()==180){  // Move Intake OUT
+        mIntakeExt.set(0.1);
+        }
     else {
       mIntakeExt.stopMotor();
       intakeExtend = false;
       intakeIn = false;
     }
+
 
   }
   /** This function is called once when the robot is disabled. */
