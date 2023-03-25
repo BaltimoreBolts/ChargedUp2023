@@ -42,10 +42,10 @@ public class Robot extends TimedRobot {
   //public DigitalInput mSwitch2;
   //public boolean mAutonSwitch2;
   
-  public static final String kConeAuto = "Normal Cone auto";
-  public static final String kConeParkAuto = "Cone and Park Auto";
-  public static final String kBlue2Auto = "Blue 2 piece Auto";
-  public static final String kRed2Auto = "Red 2 piece Auto";
+  public static final String kConeAuto = "kConeAuto";
+  public static final String kConeParkAuto = "kConeParkAuto";
+  public static final String kBlue2Auto = "kBlue2Auto";
+  public static final String kRed2Auto = "kRed2Auto";
   public String m_autoSelected;
   public final SendableChooser<String> m_chooser = new SendableChooser <> ();
 
@@ -79,7 +79,7 @@ public class Robot extends TimedRobot {
   public double gearRatio = 8.45; // Toughbox Mini
   public double rWidth = 2; // robot width in inches
 
-  public double maxArm = -40; // encoder value at full extension for arm
+  public double maxArm = -45; // encoder value at full extension for arm
   public double midArm = -25; // encoder value at mid extension for arm
   public double closedArm = 1; // encoder value at full retraction for arm 
   public double speedOut = -0.25;
@@ -140,8 +140,8 @@ public class Robot extends TimedRobot {
 
     m_chooser.setDefaultOption("Default Cone-Auto", kConeAuto);
     m_chooser.addOption("Cone-Park-Auto", kConeParkAuto);
-    m_chooser.addOption("Blue2-Auto", kBlue2Auto);
-    m_chooser.addOption("Red2-Auto", kRed2Auto);
+    m_chooser.addOption("Blue-2-Auto", kBlue2Auto);
+    m_chooser.addOption("Red-2-Auto", kRed2Auto);
     SmartDashboard.putData("Auto",m_chooser);
 
     // Open USB Camera
@@ -257,6 +257,7 @@ public class Robot extends TimedRobot {
   public void robotPeriodic() {
     mCurrentAngle = mGyro.getAngle();
     SmartDashboard.putNumber("Gyro", mCurrentAngle);
+    m_autoSelected = m_chooser.getSelected();
 
     /* 
     mAutonSwitch = mSwitch.get(); // decide which direction we want to be true after instillation
@@ -282,7 +283,7 @@ public class Robot extends TimedRobot {
     SmartDashboard.putBoolean("maxArm", mArmGoToMAX);
     SmartDashboard.putBoolean("midArm", mArmGoToMID);
     SmartDashboard.putBoolean("homeArm", mArmGoToHOME);
-    //SmartDashboard.putString("Auto Routine", autonRoutine);
+    SmartDashboard.putString("Selected Auto", m_autoSelected);
 
     matchTimer = DriverStation.getMatchTime();
     SmartDashboard.putNumber("MatchTime", matchTimer);
@@ -346,13 +347,16 @@ public class Robot extends TimedRobot {
   * move back
   * 
   */
-    if ((m_autoSelected == kConeAuto) || (m_autoSelected == kConeParkAuto)) { // normal auto (cone and leave community)
+    if ((m_autoSelected == kConeAuto) || (m_autoSelected == kConeParkAuto)) { 
+      // standard auto (cone and leave community) & park auto
       if (!autoArmExtend){
         if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 3)) {
           mArm.set(speedOut);
+          mGrabber.set(-0.1);
         }
         else {
           mArm.stopMotor();
+          mGrabber.stopMotor();
           autoArmExtend = true;
           autonGPreleaseTime= Timer.getFPGATimestamp();
         }
@@ -376,7 +380,7 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if (!autoMove && autoArmRetract && (m_autoSelected == kConeParkAuto)) {
+      if (!autoMove && autoArmRetract && (m_autoSelected == kConeAuto)) {
         // move at least X" backwards (negative position)
         if (mLeftEncoder.getPosition() > autonFinalPos) {
           mRobotDrive.arcadeDrive(-0.5, 0);
@@ -384,25 +388,28 @@ public class Robot extends TimedRobot {
           mRobotDrive.arcadeDrive(0, 0);
         }
       } 
-
-      if (!autoMove && autoArmRetract && (m_autoSelected == kConeAuto)) {
+      else if (!autoMove && autoArmRetract && (m_autoSelected == kConeParkAuto)) {
         // move at least X" backwards (negative position)
         if (mLeftEncoder.getPosition() > autonFinalPark) {
-          mRobotDrive.arcadeDrive(-0.5, 0);
+          mRobotDrive.arcadeDrive(-0.25, 0);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
         }
-      } else {
+      } 
+      else {
       mRobotDrive.arcadeDrive(0, 0);
       }
   
     } else { // super auto
+
       if (!autoArmExtend){
         if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 2.75)) {
           mArm.set(speedOut);
+          mGrabber.set(-0.1);
         }
         else {
           mArm.stopMotor();
+          mGrabber.stopMotor();;
           autoArmExtend = true;
           autonGPreleaseTime= Timer.getFPGATimestamp();
         }
@@ -449,7 +456,7 @@ public class Robot extends TimedRobot {
       if (!autoCubeTurn && autoMove && (m_autoSelected == kRed2Auto)) {
         // move at least X" backwards (negative position)
         if (gryoCubeAngleRED <= mCurrentAngle){
-          mRobotDrive.arcadeDrive(0, -0.4);
+          mRobotDrive.arcadeDrive(0, -0.25);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
           mLeftEncoder.setPosition(0);
@@ -461,7 +468,7 @@ public class Robot extends TimedRobot {
       if (!autoCubeTurn && autoMove && (m_autoSelected == kBlue2Auto)) {
         // move at least X" backwards (negative position)
         if (gryoCubeAngleBLUE >= mCurrentAngle){
-          mRobotDrive.arcadeDrive(0, 0.4);
+          mRobotDrive.arcadeDrive(0, 0.25);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
           mLeftEncoder.setPosition(0);
@@ -472,7 +479,7 @@ public class Robot extends TimedRobot {
 
       if (!autoIntoCube && autoCubeTurn) {
         if (mLeftEncoder.getPosition() > autonIntoCubePos) {
-          mRobotDrive.arcadeDrive(-0.4, 0);
+          mRobotDrive.arcadeDrive(-0.1, 0);
           mIntakeSpin.set(.5);
           mTunnelSpin.set(-.5);
           mGrabber.set(.35);
@@ -485,7 +492,7 @@ public class Robot extends TimedRobot {
 
       if (!autoCubeNodeTurn && autoIntoCube && (m_autoSelected == kRed2Auto)) {
         if (gryoCubeNodeAngleRED >= mCurrentAngle) {
-          mRobotDrive.arcadeDrive(0, 0.5);
+          mRobotDrive.arcadeDrive(0, 0.25);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
           mIntakeSpin.set(0);
@@ -499,7 +506,7 @@ public class Robot extends TimedRobot {
 
       if (!autoCubeNodeTurn && autoIntoCube && (m_autoSelected == kBlue2Auto)) {
         if (gryoCubeNodeAngleBLUE <= mCurrentAngle) {
-          mRobotDrive.arcadeDrive(0, -0.5);
+          mRobotDrive.arcadeDrive(0, -0.25);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
           mIntakeSpin.set(0);
@@ -534,7 +541,7 @@ public class Robot extends TimedRobot {
 
       if (!autoAtCubeNode && autoCubeNodeTurn) {
         if (mLeftEncoder.getPosition() < autoCubeNodePos) {
-          mRobotDrive.arcadeDrive(0.5, 0);
+          mRobotDrive.arcadeDrive(0.25, 0);
         } else {
           autonGPreleaseTime2 = Timer.getFPGATimestamp();
           mRobotDrive.arcadeDrive(0, 0);
@@ -546,10 +553,8 @@ public class Robot extends TimedRobot {
         mGrabber.set(-0.35);
         if ((autonCurrentTime - autonGPreleaseTime2) >= 0.75){
           mGrabber.stopMotor();
-          autoGPrelease = true;
+          autoGPrelease2 = true;
         }
-      } else {
-        mRobotDrive.arcadeDrive(0, 0);
       }
 
     }
