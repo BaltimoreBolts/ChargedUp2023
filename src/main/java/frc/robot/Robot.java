@@ -47,7 +47,7 @@ public class Robot extends TimedRobot {
   public static final String kBlue2Auto = "Blue 2 piece Auto";
   public static final String kRed2Auto = "Red 2 piece Auto";
   public String m_autoSelected;
-  public final SendableChooser <String> m_chooser = new SendableChooser <> ();
+  public final SendableChooser<String> m_chooser = new SendableChooser <> ();
 
   public CANSparkMax mLeftDriveMotor1;
   public CANSparkMax mRightDriveMotor1;
@@ -67,8 +67,8 @@ public class Robot extends TimedRobot {
 
   public CANSparkMax mIntakeExt;
   public CANSparkMax mIntakeSpin;
-  public RelativeEncoder mIntakeExtEncoder;
   public CANSparkMax mTunnelSpin;
+  public RelativeEncoder mIntakeExtEncoder;
 
   public Joystick mStick;
   public XboxController mXbox;
@@ -78,11 +78,6 @@ public class Robot extends TimedRobot {
   public double wheelDia = 6.0; // inches
   public double gearRatio = 8.45; // Toughbox Mini
   public double rWidth = 2; // robot width in inches
-
-  public double intakeOut = 10; // encoder value at full extension for arm (guess) --> find real val
-  public double closedIntake = 1;
-  public boolean intakeExtend = false;
-  public boolean intakeIn = false;
 
   public double maxArm = -40; // encoder value at full extension for arm
   public double midArm = -25; // encoder value at mid extension for arm
@@ -97,6 +92,10 @@ public class Robot extends TimedRobot {
 
   public double intakeStartTime;
   public boolean intaking;
+  public double intakeOut = 8; // encoder value at full extension for arm (guess) --> find real val
+  public double closedIntake = 0;
+  public boolean intakeExtend = false;
+  public boolean intakeIn = false;
 
   public double autonStartTime;
   public double autonWaitTime = 0; // seconds to wait
@@ -125,7 +124,7 @@ public class Robot extends TimedRobot {
   public boolean autoIntakeIn = false;
   public double autonArmOutTime;
 
-  public String desiredColor;
+  //public String desiredColor;
   public String autonRoutine;
   public double matchTimer;
   public double mCurrentAngle;
@@ -139,11 +138,11 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit() {
 
-    m_chooser.setDefaultOption("Default Auto", kConeAuto);
-    m_chooser.addOption("My Auto", kConeParkAuto);
-    m_chooser.addOption("My Auto", kBlue2Auto);
-    m_chooser.addOption("My Auto", kRed2Auto);
-    SmartDashboard.putData("Auto choices", m_chooser);
+    m_chooser.setDefaultOption("Default Cone-Auto", kConeAuto);
+    m_chooser.addOption("Cone-Park-Auto", kConeParkAuto);
+    m_chooser.addOption("Blue2-Auto", kBlue2Auto);
+    m_chooser.addOption("Red2-Auto", kRed2Auto);
+    SmartDashboard.putData("Auto",m_chooser);
 
     // Open USB Camera
     fishEye = CameraServer.startAutomaticCapture();
@@ -212,6 +211,9 @@ public class Robot extends TimedRobot {
     mIntakeSpin = new CANSparkMax(8, MotorType.kBrushless);
     mTunnelSpin = new CANSparkMax(10, MotorType.kBrushless);
 
+    mIntakeExt.restoreFactoryDefaults();
+    mIntakeSpin.restoreFactoryDefaults();
+    mTunnelSpin.restoreFactoryDefaults();
     mIntakeExt.setSmartCurrentLimit(40);
     mIntakeSpin.setSmartCurrentLimit(40);
     mTunnelSpin.setSmartCurrentLimit(40);
@@ -269,7 +271,6 @@ public class Robot extends TimedRobot {
       autonRoutine = "Cone and Mobility Auto";
     }
     */
-    autonRoutine = "test";
 
     // push values to dashboard here
     //SmartDashboard.putBoolean("AutonSwitch", mAutonSwitch);
@@ -281,7 +282,7 @@ public class Robot extends TimedRobot {
     SmartDashboard.putBoolean("maxArm", mArmGoToMAX);
     SmartDashboard.putBoolean("midArm", mArmGoToMID);
     SmartDashboard.putBoolean("homeArm", mArmGoToHOME);
-    SmartDashboard.putString("Auto Routine", autonRoutine);
+    //SmartDashboard.putString("Auto Routine", autonRoutine);
 
     matchTimer = DriverStation.getMatchTime();
     SmartDashboard.putNumber("MatchTime", matchTimer);
@@ -323,6 +324,7 @@ public class Robot extends TimedRobot {
     autoAtCubeNode = false;
     autoGPrelease2 = false;
     autoIntakeIn = false;
+
     intakeExtend = false;
     intakeIn = false;
 
@@ -567,6 +569,9 @@ public class Robot extends TimedRobot {
 
       mArm.stopMotor();
       mGrabber.stopMotor();
+      mIntakeExt.stopMotor();
+      mIntakeSpin.stopMotor();
+      mTunnelSpin.stopMotor();
       mRobotDrive.arcadeDrive(0, 0);
 
       mArmGoToMAX = false;
@@ -583,13 +588,12 @@ public class Robot extends TimedRobot {
       mRightDriveMotor1.burnFlash();
       mRightDriveMotor2.burnFlash();
 
-    mGyro.reset();
+      mGyro.reset();
   }
 
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
-
 
     // Switch drive to BRAKE in end game
     
@@ -628,8 +632,8 @@ public class Robot extends TimedRobot {
     
     if (intaking) {
       if((Timer.getFPGATimestamp() - intakeStartTime) < 5){
-        mIntakeSpin.set(.5);
-        mTunnelSpin.set(-.5);
+        mIntakeSpin.set(.25);
+        mTunnelSpin.set(-.25);
         mGrabber.set(.35);
       } else {
         mIntakeSpin.stopMotor();
@@ -640,20 +644,18 @@ public class Robot extends TimedRobot {
     }
 
     //Grabber control
-    if (mXbox.getLeftBumper()) { //Signal CONE lights
-      //light to YELLOW
+    if (mXbox.getLeftBumper()) { // Push cube out of robot (down the tunnel)
       mGrabber.set(-0.35);
-      mIntakeSpin.set(-.5);
-      mTunnelSpin.set(.5);
+      mIntakeSpin.set(-.25);
+      mTunnelSpin.set(.25);
     }
     else if (mXbox.getLeftTriggerAxis() == 1){ //Pickup CONE
       mGrabber.set(-0.45);
     }
-    else if (mXbox.getRightBumper()) { //Signal CUBE lights
-      //light to PURPLE
+    else if (mXbox.getRightBumper()) { // Pull cube into robot (up the tunnel)
       mGrabber.set(0.35);
-      mIntakeSpin.set(.5);
-      mTunnelSpin.set(-.5);
+      mIntakeSpin.set(.25);
+      mTunnelSpin.set(-.25);
     }
     else if (mXbox.getRightTriggerAxis() == 1){ //Pickup CUBE
       mGrabber.set(0.35);
@@ -676,6 +678,7 @@ public class Robot extends TimedRobot {
       A button = arm in (hold)
     */
 
+    /*
     if ((mXbox.getPOV()==0) || mArmGoToMAX){  //Extend arm to MAX
       if(mXbox.getPOV()==0){
         armStartTime = Timer.getFPGATimestamp();
@@ -735,7 +738,9 @@ public class Robot extends TimedRobot {
       mArmGoToMAX = false;
       mArmGoToHOME = false;
     }
-    else if (mXbox.getYButton()) { // Move arm out
+    else
+    */ 
+    if (mXbox.getYButton()) { // Move arm out
       mArm.set(speedOut);
     }
     else if (mXbox.getAButton()) { // Move arm in
@@ -748,27 +753,24 @@ public class Robot extends TimedRobot {
       mArmGoToHOME = false;
     }
 
+    //Intake logic
     if (mXbox.getXButton() || intakeExtend){
       intakeExtend = true;
       if (mIntakeExtEncoder.getPosition() < intakeOut) {
-        mIntakeExt.set(.125);
+        mIntakeExt.set(.2);
       }
       else {
         mIntakeExt.stopMotor();
-      }
-      if (mIntakeExtEncoder.getPosition() >= (intakeOut)) {
         intakeExtend = false;
       }
     }
     else if (mXbox.getBButton() || intakeIn){
       intakeIn = true;
-      if (mIntakeExtEncoder.getPosition() > closedIntake) {
-        mIntakeExt.set(-.125);
+      if (mIntakeExtEncoder.getPosition() >= closedIntake) {
+        mIntakeExt.set(-.2);
       }
       else {
         mIntakeExt.stopMotor();
-      }
-      if (mIntakeExtEncoder.getPosition() <= (closedIntake)) {
         intakeIn = false;
       }
     }
