@@ -46,6 +46,7 @@ public class Robot extends TimedRobot {
   public static final String kConeParkAuto = "kConeParkAuto";
   public static final String kBlue2Auto = "kBlue2Auto";
   public static final String kRed2Auto = "kRed2Auto";
+  public static final String kConeStayStillAuto = "kConeStayStillAuto";
   public String m_autoSelected;
   public final SendableChooser<String> m_chooser = new SendableChooser <> ();
 
@@ -92,7 +93,7 @@ public class Robot extends TimedRobot {
 
   public double intakeStartTime;
   public boolean intaking;
-  public double intakeOut = 8; // encoder value at full extension for arm (guess) --> find real val
+  public double intakeOut = 12.5; // encoder value at full extension for arm (guess) --> find real val
   public double closedIntake = 0;
   public boolean intakeExtend = false;
   public boolean intakeIn = false;
@@ -102,7 +103,7 @@ public class Robot extends TimedRobot {
   public double autonCurrentTime;
   public double autonGPreleaseTime; 
   public double autonFinalPos = -160; //-160  inches to drive backwards
-  public double autonFinalPark = -74; // distance to park or posibly engage
+  public double autonFinalPark = -85; // distance to park or posibly engage
   public double autonCubePos = -170; //-180  inches to drive backwards
   public double autoCubeNodePos = 189; //189  inches to cube node
   public double autonIntoCubePos = -25;
@@ -142,11 +143,12 @@ public class Robot extends TimedRobot {
     m_chooser.addOption("Cone-Park-Auto", kConeParkAuto);
     m_chooser.addOption("Blue-2-Auto", kBlue2Auto);
     m_chooser.addOption("Red-2-Auto", kRed2Auto);
+    m_chooser.addOption("Cone and Stay Still Auto,", kConeStayStillAuto); 
     SmartDashboard.putData("Auto",m_chooser);
 
     // Open USB Camera
     fishEye = CameraServer.startAutomaticCapture();
-    fishEye.setVideoMode(PixelFormat.kYUYV, 320, 240, 30);
+    fishEye.setVideoMode(PixelFormat.kYUYV, 320, 240, 15);
     fishEye.setConnectionStrategy(ConnectionStrategy.kKeepOpen);
 
     // Power Distribution -- must be at CAN ID 1
@@ -347,12 +349,13 @@ public class Robot extends TimedRobot {
   * move back
   * 
   */
-    if ((m_autoSelected == kConeAuto) || (m_autoSelected == kConeParkAuto)) { 
+    if ((m_autoSelected == kConeAuto) || (m_autoSelected == kConeParkAuto) || (m_autoSelected == kConeStayStillAuto)) { 
       // standard auto (cone and leave community) & park auto
       if (!autoArmExtend){
         if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 3)) {
           mArm.set(speedOut);
           mGrabber.set(-0.1);
+          //mGrabber.set(0.1); //cube
         }
         else {
           mArm.stopMotor();
@@ -364,6 +367,7 @@ public class Robot extends TimedRobot {
 
       if (!autoGPrelease && autoArmExtend) {
           mGrabber.set(0.35);
+          //mGrabber.set(-0.35); //cube
           if ((autonCurrentTime - autonGPreleaseTime) >= 1){
             mGrabber.stopMotor();
             autoGPrelease = true;
@@ -390,8 +394,11 @@ public class Robot extends TimedRobot {
       } 
       else if (!autoMove && autoArmRetract && (m_autoSelected == kConeParkAuto)) {
         // move at least X" backwards (negative position)
-        if (mLeftEncoder.getPosition() > autonFinalPark) {
+        if (mLeftEncoder.getPosition() > autonFinalPark+10) {
           mRobotDrive.arcadeDrive(-0.45, 0);
+        }
+        else if (mLeftEncoder.getPosition() > autonFinalPark) {
+          mRobotDrive.arcadeDrive(-0.25, 0);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
         }
@@ -400,7 +407,9 @@ public class Robot extends TimedRobot {
       mRobotDrive.arcadeDrive(0, 0);
       }
   
-    } else { // super auto
+    }
+    
+    else { // super auto
 
       if (!autoArmExtend){
         if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 2.75)) {
