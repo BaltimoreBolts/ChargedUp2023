@@ -93,7 +93,7 @@ public class Robot extends TimedRobot {
 
   public double intakeStartTime;
   public boolean intaking;
-  public double intakeOut = 12.5; // encoder value at full extension for arm (guess) --> find real val
+  public double intakeOut = 10; // encoder value at full extension for arm (guess) --> find real val
   public double closedIntake = 0;
   public boolean intakeExtend = false;
   public boolean intakeIn = false;
