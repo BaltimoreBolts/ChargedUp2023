@@ -123,6 +123,7 @@ public class Robot extends TimedRobot {
   public double autonGPreleaseTime2;
   public boolean autoGPrelease2 = false;
   public boolean autoIntakeIn = false;
+  public boolean autoArmExtend2 = false;
   public double autonArmOutTime;
 
   //public String desiredColor;
@@ -286,15 +287,19 @@ public class Robot extends TimedRobot {
     SmartDashboard.putBoolean("midArm", mArmGoToMID);
     SmartDashboard.putBoolean("homeArm", mArmGoToHOME);
     SmartDashboard.putString("Selected Auto", m_autoSelected);
+    SmartDashboard.putBoolean("autoArmExtend", autoArmExtend);
+    SmartDashboard.putBoolean("autoGPrelease", autoGPrelease);
     SmartDashboard.putBoolean("autoArmRetract", autoArmRetract);
+    SmartDashboard.putBoolean("autonIntakeExtend", autonIntakeExtend);
+    SmartDashboard.putBoolean("autoMove", autoMove);
     SmartDashboard.putBoolean("autoCubeTurn", autoCubeTurn);
     SmartDashboard.putBoolean("autoIntoCube", autoIntoCube);
     SmartDashboard.putBoolean("autoCubeNodeTurn", autoCubeNodeTurn);
-    SmartDashboard.putBoolean("autoAtCubeNode", autoAtCubeNode);
-    SmartDashboard.putBoolean("autoGPrelease", autoGPrelease);
     SmartDashboard.putBoolean("autoIntakeIn", autoIntakeIn);
-    SmartDashboard.putBoolean("autonIntakeExtend", intakeExtend);
-    SmartDashboard.putBoolean("autonIntakeExtend", autonIntakeExtend);
+    SmartDashboard.putBoolean("autoArmExtend2", autoArmExtend2);
+    SmartDashboard.putBoolean("autoAtCubeNode", autoAtCubeNode);
+    SmartDashboard.putBoolean("autoGPrelease2", autoGPrelease2);
+    
     matchTimer = DriverStation.getMatchTime();
     SmartDashboard.putNumber("MatchTime", matchTimer);
   }
@@ -325,6 +330,7 @@ public class Robot extends TimedRobot {
     mArmGoToHOME = false;
 
     autoArmExtend = false;
+    autoArmExtend2 = false;
     autoGPrelease = false;
     autoArmRetract = false;
     autoMove = false;
@@ -458,7 +464,7 @@ public class Robot extends TimedRobot {
           mRobotDrive.arcadeDrive(0, 0);
           autoMove = true;
         }
-      } 
+      }
       
       if (!autonIntakeExtend && autoArmRetract) {
         if (mIntakeExtEncoder.getPosition() < (intakeOut-2)) {
@@ -546,13 +552,13 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if (!autoAtCubeNode && autoIntakeIn) {
+      if (!autoArmExtend2 && autoIntakeIn) {
         if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonArmOutTime <= 2.75)) {
           mArm.set(speedOut);
         }
         else {
           mArm.stopMotor();
-          autoArmExtend = true;
+          autoArmExtend2 = true;
         }
       }
 
@@ -769,6 +775,7 @@ public class Robot extends TimedRobot {
     autoIntakeIn = false;
     intakeExtend = false;
     intakeIn = false;
+    autoArmExtend2 = false;
   }
 
   /** This function is called periodically when disabled. */
@@ -789,6 +796,7 @@ public class Robot extends TimedRobot {
     autoIntoCube = false;
     autoCubeNodeTurn = false;
     autoAtCubeNode = false;
+    autoArmExtend2 = false;
     autoGPrelease2 = false;
     autoIntakeIn = false;
     intakeExtend = false;
