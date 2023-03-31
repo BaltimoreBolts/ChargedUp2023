@@ -286,7 +286,15 @@ public class Robot extends TimedRobot {
     SmartDashboard.putBoolean("midArm", mArmGoToMID);
     SmartDashboard.putBoolean("homeArm", mArmGoToHOME);
     SmartDashboard.putString("Selected Auto", m_autoSelected);
-
+    SmartDashboard.putBoolean("autoArmRetract", autoArmRetract);
+    SmartDashboard.putBoolean("autoCubeTurn", autoCubeTurn);
+    SmartDashboard.putBoolean("autoIntoCube", autoIntoCube);
+    SmartDashboard.putBoolean("autoCubeNodeTurn", autoCubeNodeTurn);
+    SmartDashboard.putBoolean("autoAtCubeNode", autoAtCubeNode);
+    SmartDashboard.putBoolean("autoGPrelease", autoGPrelease);
+    SmartDashboard.putBoolean("autoIntakeIn", autoIntakeIn);
+    SmartDashboard.putBoolean("autonIntakeExtend", intakeExtend);
+    SmartDashboard.putBoolean("autonIntakeExtend", autonIntakeExtend);
     matchTimer = DriverStation.getMatchTime();
     SmartDashboard.putNumber("MatchTime", matchTimer);
   }
@@ -453,7 +461,7 @@ public class Robot extends TimedRobot {
       } 
       
       if (!autonIntakeExtend && autoArmRetract) {
-        if (mIntakeExtEncoder.getPosition() < intakeOut) {
+        if (mIntakeExtEncoder.getPosition() < (intakeOut-2)) {
           mIntakeExt.set(.25);
         }
         else {
@@ -465,7 +473,7 @@ public class Robot extends TimedRobot {
       if (!autoCubeTurn && autoMove && (m_autoSelected == kRed2Auto)) {
         // move at least X" backwards (negative position)
         if (gryoCubeAngleRED <= mCurrentAngle){
-          mRobotDrive.arcadeDrive(0, -0.25);
+          mRobotDrive.arcadeDrive(0, 0.4);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
           mLeftEncoder.setPosition(0);
@@ -477,7 +485,7 @@ public class Robot extends TimedRobot {
       if (!autoCubeTurn && autoMove && (m_autoSelected == kBlue2Auto)) {
         // move at least X" backwards (negative position)
         if (gryoCubeAngleBLUE >= mCurrentAngle){
-          mRobotDrive.arcadeDrive(0, 0.25);
+          mRobotDrive.arcadeDrive(0, -0.35);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
           mLeftEncoder.setPosition(0);
@@ -486,9 +494,9 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if (!autoIntoCube && autoCubeTurn) {
-        if (mLeftEncoder.getPosition() > autonIntoCubePos) {
-          mRobotDrive.arcadeDrive(-0.1, 0);
+      if (!autoIntoCube && autoCubeTurn && (mLeftEncoder.getPosition() == 0)) {
+        if (mLeftEncoder.getPosition() < autonIntoCubePos) {
+          mRobotDrive.arcadeDrive(-0.25, 0);
           mIntakeSpin.set(.5);
           mTunnelSpin.set(-.5);
           mGrabber.set(.35);
@@ -498,10 +506,10 @@ public class Robot extends TimedRobot {
           autoIntoCube = true;
         }
       }
-
+     /*
       if (!autoCubeNodeTurn && autoIntoCube && (m_autoSelected == kRed2Auto)) {
         if (gryoCubeNodeAngleRED >= mCurrentAngle) {
-          mRobotDrive.arcadeDrive(0, 0.25);
+          mRobotDrive.arcadeDrive(0, -0.35);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
           mIntakeSpin.set(0);
@@ -515,7 +523,7 @@ public class Robot extends TimedRobot {
 
       if (!autoCubeNodeTurn && autoIntoCube && (m_autoSelected == kBlue2Auto)) {
         if (gryoCubeNodeAngleBLUE <= mCurrentAngle) {
-          mRobotDrive.arcadeDrive(0, -0.25);
+          mRobotDrive.arcadeDrive(0, 0.4);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
           mIntakeSpin.set(0);
@@ -529,7 +537,7 @@ public class Robot extends TimedRobot {
 
       if (!autoIntakeIn && autoCubeNodeTurn) {
         if (mIntakeExtEncoder.getPosition() < closedIntake) {
-          mIntakeExt.set(-0.25);
+          mIntakeExt.set(-0.2);
         } else {
           mIntakeExt.set(0);
           mArmEncoder.setPosition(0);
@@ -550,7 +558,7 @@ public class Robot extends TimedRobot {
 
       if (!autoAtCubeNode && autoCubeNodeTurn) {
         if (mLeftEncoder.getPosition() < autoCubeNodePos) {
-          mRobotDrive.arcadeDrive(0.25, 0);
+          mRobotDrive.arcadeDrive(0.4, 0);
         } else {
           autonGPreleaseTime2 = Timer.getFPGATimestamp();
           mRobotDrive.arcadeDrive(0, 0);
@@ -565,7 +573,7 @@ public class Robot extends TimedRobot {
           autoGPrelease2 = true;
         }
       }
-
+        */
     }
 
   } else {
