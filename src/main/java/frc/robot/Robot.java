@@ -164,9 +164,6 @@ public class Robot extends TimedRobot {
       DriverStation.reportError("Error instantiating navX MXP: " + ex.getMessage(), true);
     }
 
-    //mSwitch = new DigitalInput(3); // change channel after instillation 
-    //mSwitch = new DigitalInput(4);
-    
     // Drive Motors
     mLeftDriveMotor1 = new CANSparkMax(5, MotorType.kBrushless);
     mLeftDriveMotor2 = new CANSparkMax(2, MotorType.kBrushless);
@@ -262,23 +259,7 @@ public class Robot extends TimedRobot {
     SmartDashboard.putNumber("Gyro", mCurrentAngle);
     m_autoSelected = m_chooser.getSelected();
 
-    /* 
-    mAutonSwitch = mSwitch.get(); // decide which direction we want to be true after instillation
-    mAutonSwitch2 = mSwitch2.get();
-    if (mAutonSwitch && mAutonSwitch2){
-      autonRoutine = "Blue - 2 Game Piece Auto";
-    } else if (mAutonSwitch && !mAutonSwitch2){
-      autonRoutine = "Red - 2 Game Piece Auto";
-    } else if (!mAutonSwitch && mAutonSwitch2){
-      autonRoutine = "Cone and Park/Engage Auto";
-    } else {
-      autonRoutine = "Cone and Mobility Auto";
-    }
-    */
-
     // push values to dashboard here
-    //SmartDashboard.putBoolean("AutonSwitch", mAutonSwitch);
-    //SmartDashboard.putBoolean("AutonSwitch2", mAutonSwitch2);
     SmartDashboard.putNumber("Intake", mIntakeExtEncoder.getPosition());  
     SmartDashboard.putNumber("[DT] LT-EncPos", mLeftEncoder.getPosition());
     SmartDashboard.putNumber("[DT] RT-EncPos", mRightEncoder.getPosition());
