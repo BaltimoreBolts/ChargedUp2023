@@ -125,7 +125,9 @@ public class Robot extends TimedRobot {
   public boolean autoIntakeIn = false;
   public boolean autoArmExtend2 = false;
   public boolean encoderReset = false; 
+  public boolean AutocubeInMore = false;
   public double autonArmOutTime;
+  public double autoMoreCubeInTime;
 
   //public String desiredColor;
   public String autonRoutine;
@@ -279,6 +281,7 @@ public class Robot extends TimedRobot {
     SmartDashboard.putBoolean("autoIntoCube", autoIntoCube);
     SmartDashboard.putBoolean("autoCubeNodeTurn", autoCubeNodeTurn);
     SmartDashboard.putBoolean("autoIntakeIn", autoIntakeIn);
+    SmartDashboard.putBoolean("AutocubeInMore", AutocubeInMore);
     SmartDashboard.putBoolean("autoArmExtend2", autoArmExtend2);
     SmartDashboard.putBoolean("autoAtCubeNode", autoAtCubeNode);
     SmartDashboard.putBoolean("autoGPrelease2", autoGPrelease2);
@@ -325,6 +328,7 @@ public class Robot extends TimedRobot {
     autoGPrelease2 = false;
     autoIntakeIn = false;
     encoderReset = false;
+    AutocubeInMore = false;
 
     intakeExtend = false;
     intakeIn = false;
@@ -350,9 +354,9 @@ public class Robot extends TimedRobot {
     if ((m_autoSelected == kConeAuto) || (m_autoSelected == kConeParkAuto) || (m_autoSelected == kConeStayStillAuto)) { 
       // standard auto (cone and leave community) & park auto
       if (!autoArmExtend){
-        if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 3)) {
+        if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 3)) { //arm out with 3 second breakout
           mArm.set(speedOut);
-          mGrabber.set(-0.1);
+          mGrabber.set(-0.1); //cone
           //mGrabber.set(0.1); //cube
         }
         else {
@@ -364,7 +368,7 @@ public class Robot extends TimedRobot {
       }
 
       if (!autoGPrelease && autoArmExtend) {
-          mGrabber.set(0.35);
+          mGrabber.set(0.35); //cone
           //mGrabber.set(-0.35); //cube
           if ((autonCurrentTime - autonGPreleaseTime) >= 1){
             mGrabber.stopMotor();
@@ -384,7 +388,7 @@ public class Robot extends TimedRobot {
 
       if (!autoMove && autoArmRetract && (m_autoSelected == kConeAuto)) {
         // move at least X" backwards (negative position)
-        if (mLeftEncoder.getPosition() > autonFinalPos) {
+        if (mLeftEncoder.getPosition() > autonFinalPos) { // drive back for normal mobility (160")
           mRobotDrive.arcadeDrive(-0.5, 0);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
@@ -392,7 +396,7 @@ public class Robot extends TimedRobot {
       } 
       else if (!autoMove && autoArmRetract && (m_autoSelected == kConeParkAuto)) {
         // move at least X" backwards (negative position)
-        if (mLeftEncoder.getPosition() > autonFinalPark+10) {
+        if (mLeftEncoder.getPosition() > autonFinalPark+10) { // drive back for dock (all at 45% except last 10") 85" total
           mRobotDrive.arcadeDrive(-0.45, 0);
         }
         else if (mLeftEncoder.getPosition() > autonFinalPark) {
@@ -402,7 +406,7 @@ public class Robot extends TimedRobot {
         }
       } 
       else {
-      mRobotDrive.arcadeDrive(0, 0);
+      mRobotDrive.arcadeDrive(0, 0); // mid auto when we don't want to move - kConeStayStillAuto
       }
   
     }
@@ -410,9 +414,9 @@ public class Robot extends TimedRobot {
     else { // super auto
 
       if (!autoArmExtend){
-        if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 2.75)) {
+        if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 2.25)) { //arm out
           mArm.set(speedOut);
-          mGrabber.set(-0.1);
+          mGrabber.set(-0.1); //keeps cone in
           mRobotDrive.arcadeDrive(0, 0);
         }
         else {
@@ -427,21 +431,20 @@ public class Robot extends TimedRobot {
       if (!autoGPrelease && autoArmExtend) {
           mGrabber.set(0.35);
           mRobotDrive.arcadeDrive(0, 0);
-          if ((autonCurrentTime - autonGPreleaseTime) >= 0.75){
+          if ((autonCurrentTime - autonGPreleaseTime) >= 0.75){ //.75 seconds of shooting out cone
             mGrabber.stopMotor();
             autoGPrelease = true;
           }
       }
 
-      if (!autoMove && autoGPrelease) {
-        // move at least X" backwards (negative position)
-        if (mLeftEncoder.getPosition() > autonCubePos) {
+      if (!autoMove && autoGPrelease) { //moving towards cube --> arm in during movement, then intake out
+        if (mLeftEncoder.getPosition() > autonCubePos) { //moving back 175"
           mRobotDrive.arcadeDrive(-0.5, 0);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
-          autoMove = true;
+          autoMove = true; //condition to breakout of the whole bit and move onto the next
         }
-        if (!autoArmRetract && autoGPrelease) {
+        if (!autoArmRetract && autoGPrelease) { //arm in starts when movement does
           if (mArmEncoder.getPosition() < closedArm) {
             mArm.set(speedIn);
           }
@@ -450,7 +453,7 @@ public class Robot extends TimedRobot {
             autoArmRetract = true;
           }
         }
-        else if (!autonIntakeExtend && autoArmRetract) {
+        else if (!autonIntakeExtend && autoArmRetract) { //intake in starts when the arm is retracted
           if (mIntakeExtEncoder.getPosition() < (intakeOut)) {
             mIntakeExt.set(.25);
           }
@@ -464,8 +467,8 @@ public class Robot extends TimedRobot {
 
       if (!autoCubeTurn && autoMove && (m_autoSelected == kRed2Auto)) {
         // move at least X" backwards (negative position)
-        if (gryoCubeAngleRED <= mCurrentAngle){
-          mRobotDrive.arcadeDrive(0, 0.35);
+        if (gryoCubeAngleRED <= mCurrentAngle){ //turns 35 degrees CCW (we want 40 from the overshoot)
+          mRobotDrive.arcadeDrive(0, 0.35); //val is opposite for all turns due to flipped stick
         } else {
           mRobotDrive.arcadeDrive(0, 0);
           mLeftEncoder.setPosition(0);
@@ -475,8 +478,7 @@ public class Robot extends TimedRobot {
       }
 
       if (!autoCubeTurn && autoMove && (m_autoSelected == kBlue2Auto)) {
-        // move at least X" backwards (negative position)
-        if (gryoCubeAngleBLUE >= mCurrentAngle){
+        if (gryoCubeAngleBLUE >= mCurrentAngle){ //turns 35 degrees CW (we want 40 from the overshoot)
           mRobotDrive.arcadeDrive(0, -0.35);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
@@ -486,14 +488,14 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if(!encoderReset && autoCubeTurn && (mLeftEncoder.getPosition() == 0)){
+      if(!encoderReset && autoCubeTurn && (mLeftEncoder.getPosition() == 0)){ //bit that ensures drive encoders are reset before proceeding
         encoderReset = true;
       }
 
       if (!autoIntoCube && encoderReset) {
-        if (mLeftEncoder.getPosition() > autonIntoCubePos) {
+        if (mLeftEncoder.getPosition() > autonIntoCubePos) { //driving into the cube with intake/tunnel on
           mRobotDrive.arcadeDrive(-0.35, 0);
-          mIntakeSpin.set(.25);
+          mIntakeSpin.set(.25); // will turn off intake/tunnel moters 2 bits later (as of 4/2/23)
           mTunnelSpin.set(-.25);
           mGrabber.set(.35);
         } else {
@@ -504,8 +506,8 @@ public class Robot extends TimedRobot {
         }
       }
       if (!autoCubeNodeTurn && autoIntoCube && (m_autoSelected == kRed2Auto)) {
-        if (gryoCubeNodeAngleRED >= mCurrentAngle) {
-          mRobotDrive.arcadeDrive(0, -0.35);
+        if (gryoCubeNodeAngleRED >= mCurrentAngle) { //turns 35 degrees CW (we want 40 from the overshoot)
+          mRobotDrive.arcadeDrive(0, -0.35); // turn makes robot face the cube node
         } else {
           mRobotDrive.arcadeDrive(0, 0);
           mLeftEncoder.setPosition(0);
@@ -515,8 +517,8 @@ public class Robot extends TimedRobot {
       }
 
       if (!autoCubeNodeTurn && autoIntoCube && (m_autoSelected == kBlue2Auto)) {
-        if (gryoCubeNodeAngleBLUE <= mCurrentAngle) {
-          mRobotDrive.arcadeDrive(0, 0.35);
+        if (gryoCubeNodeAngleBLUE <= mCurrentAngle) { //turns 35 degrees CCW (we want 40 from the overshoot)
+          mRobotDrive.arcadeDrive(0, 0.35); // turn makes robot face the cube node
         } else {
           mRobotDrive.arcadeDrive(0, 0);
           mIntakeSpin.set(0);
@@ -528,28 +530,36 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if (!autoAtCubeNode && autoCubeNodeTurn) {
-        if (mLeftEncoder.getPosition() < autoCubeNodePos) {
+      if (!autoAtCubeNode && autoCubeNodeTurn) { //driving to cube node --> pulls in intake, then arm out
+        if (mLeftEncoder.getPosition() < autoCubeNodePos) { // 194"
           mRobotDrive.arcadeDrive(0.4, 0);
         } else {
-          autonGPreleaseTime2 = Timer.getFPGATimestamp();
+          autonGPreleaseTime2 = Timer.getFPGATimestamp(); //next bit is time based and needs this for its start time
           mRobotDrive.arcadeDrive(0, 0);
-          autoAtCubeNode = true;
+          autoAtCubeNode = true; //condition to breakout of large "if"
         }
         if (!autoIntakeIn && autoCubeNodeTurn) {
           if (mIntakeExtEncoder.getPosition() > closedIntake) {
             mIntakeExt.set(-0.2);
           } else {
             mIntakeExt.set(0);
-            mArmEncoder.setPosition(0);
-            mIntakeSpin.set(0);
-            mTunnelSpin.set(0);
-            mGrabber.set(0);
-            autonArmOutTime = Timer.getFPGATimestamp();
-            autoIntakeIn = true;
+            autoMoreCubeInTime = Timer.getFPGATimestamp(); //start time for extra intaking (next bit)
+            autoIntakeIn = true; //breakout of small "if" into arm out
           }
         }
-        if (!autoArmExtend2 && autoIntakeIn) {
+        if (!AutocubeInMore && autoIntakeIn){
+          if((autonCurrentTime - autoMoreCubeInTime <= 2)){
+            autoIntakeIn = false;
+          } else{
+            mArmEncoder.setPosition(0);
+            mIntakeSpin.set(0); //stops tunnel/intake motors after extra intaking time
+            mTunnelSpin.set(0);
+            mGrabber.set(0);
+            autonArmOutTime = Timer.getFPGATimestamp(); //start time for arm out (next bit)
+            AutocubeInMore = true;
+          }
+        }
+        if (!autoArmExtend2 && AutocubeInMore) { //arm out
           if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonArmOutTime <= 2.75)) {
             mArm.set(speedOut);
           }
@@ -560,7 +570,7 @@ public class Robot extends TimedRobot {
         }
       }
       
-      if (!autoGPrelease2 && autoAtCubeNode) {
+      if (!autoGPrelease2 && autoAtCubeNode) { //shoots out cube
         mGrabber.set(-0.35);
         if ((autonCurrentTime - autonGPreleaseTime2) >= 0.75){
           mGrabber.stopMotor();
@@ -758,6 +768,7 @@ public class Robot extends TimedRobot {
     autoIntoCube = false;
     autoCubeNodeTurn = false;
     encoderReset = false;
+    AutocubeInMore = false;
     autoAtCubeNode = false;
     autoGPrelease2 = false;
     autoIntakeIn = false;
@@ -790,5 +801,6 @@ public class Robot extends TimedRobot {
     autoIntakeIn = false;
     intakeExtend = false;
     intakeIn = false;
+    AutocubeInMore = false;
   }
 }
