@@ -104,8 +104,8 @@ public class Robot extends TimedRobot {
   public double autonGPreleaseTime; 
   public double autonFinalPos = -160; //-160  inches to drive backwards
   public double autonFinalPark = -85; // distance to park or posibly engage
-  public double autonCubePos = -175; //-180  inches to drive backwards
-  public double autoCubeNodePos = 194; //189  inches to cube node
+  public double autonCubePos = -165; //-180  inches to drive backwards
+  public double autoCubeNodePos = 185; //189  inches to cube node
   public double autonIntoCubePos = -25;
   public double gryoCubeAngleRED = -35; // turn to face cube
   public double gryoCubeNodeAngleRED = 35; // turn to face cube node
@@ -207,6 +207,8 @@ public class Robot extends TimedRobot {
     mRightDriveMotor2.burnFlash();
 
     mRobotDrive = new DifferentialDrive(mLeftMotors, mRightMotors);
+    mRobotDrive.setSafetyEnabled(false);
+
     setMotorsToBrake = false;
 
     // Intake And Tunnel
@@ -288,6 +290,7 @@ public class Robot extends TimedRobot {
     
     matchTimer = DriverStation.getMatchTime();
     SmartDashboard.putNumber("MatchTime", matchTimer);
+
   }
 
   /**
@@ -431,7 +434,7 @@ public class Robot extends TimedRobot {
       if (!autoGPrelease && autoArmExtend) {
           mGrabber.set(0.35);
           mRobotDrive.arcadeDrive(0, 0);
-          if ((autonCurrentTime - autonGPreleaseTime) >= 0.75){ //.75 seconds of shooting out cone
+          if ((autonCurrentTime - autonGPreleaseTime) >= 0.4){ //.75 seconds of shooting out cone
             mGrabber.stopMotor();
             autoGPrelease = true;
           }
@@ -490,18 +493,20 @@ public class Robot extends TimedRobot {
 
       if(!encoderReset && autoCubeTurn && (mLeftEncoder.getPosition() == 0)){ //bit that ensures drive encoders are reset before proceeding
         encoderReset = true;
+        mGyro.reset();
+      }
+      if(!encoderReset && autoCubeTurn){ //keep drive happy 
+        mRobotDrive.arcadeDrive(0, 0);
       }
 
       if (!autoIntoCube && encoderReset) {
         if (mLeftEncoder.getPosition() > autonIntoCubePos) { //driving into the cube with intake/tunnel on
           mRobotDrive.arcadeDrive(-0.35, 0);
-          mIntakeSpin.set(.25); // will turn off intake/tunnel moters 2 bits later (as of 4/2/23)
-          mTunnelSpin.set(-.25);
+          mIntakeSpin.set(.35); // will turn off intake/tunnel moters 2 bits later (as of 4/2/23)
+          mTunnelSpin.set(-.4);
           mGrabber.set(.35);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
-          mGyro.reset();
-          encoderReset = false;
           autoIntoCube = true;
         }
       }
@@ -521,9 +526,6 @@ public class Robot extends TimedRobot {
           mRobotDrive.arcadeDrive(0, 0.35); // turn makes robot face the cube node
         } else {
           mRobotDrive.arcadeDrive(0, 0);
-          mIntakeSpin.set(0);
-          mTunnelSpin.set(0);
-          mGrabber.set(0);
           mLeftEncoder.setPosition(0);
           mRightEncoder.setPosition(0);
           autoCubeNodeTurn = true;
@@ -532,7 +534,7 @@ public class Robot extends TimedRobot {
 
       if (!autoAtCubeNode && autoCubeNodeTurn) { //driving to cube node --> pulls in intake, then arm out
         if (mLeftEncoder.getPosition() < autoCubeNodePos) { // 194"
-          mRobotDrive.arcadeDrive(0.4, 0);
+          mRobotDrive.arcadeDrive(0.48, 0);
         } else {
           autonGPreleaseTime2 = Timer.getFPGATimestamp(); //next bit is time based and needs this for its start time
           mRobotDrive.arcadeDrive(0, 0);
@@ -548,8 +550,8 @@ public class Robot extends TimedRobot {
           }
         }
         if (!AutocubeInMore && autoIntakeIn){
-          if((autonCurrentTime - autoMoreCubeInTime <= 2)){
-            autoIntakeIn = false;
+          if((autonCurrentTime - autoMoreCubeInTime <= 0)){
+
           } else{
             mArmEncoder.setPosition(0);
             mIntakeSpin.set(0); //stops tunnel/intake motors after extra intaking time
@@ -560,14 +562,14 @@ public class Robot extends TimedRobot {
           }
         }
         if (!autoArmExtend2 && AutocubeInMore) { //arm out
-          if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonArmOutTime <= 2.75)) {
+          if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonArmOutTime <= 2)) {
             mArm.set(speedOut);
           }
           else {
             mArm.stopMotor();
             autoArmExtend2 = true;
           }
-        }
+          }
       }
       
       if (!autoGPrelease2 && autoAtCubeNode) { //shoots out cube
