@@ -47,6 +47,7 @@ public class Robot extends TimedRobot {
   public static final String kBlue2Auto = "kBlue2Auto";
   public static final String kRed2Auto = "kRed2Auto";
   public static final String kConeStayStillAuto = "kConeStayStillAuto";
+  public static final String kEngageAuto = "kEngageAuto";
   public String m_autoSelected;
   public final SendableChooser<String> m_chooser = new SendableChooser <> ();
 
@@ -104,6 +105,7 @@ public class Robot extends TimedRobot {
   public double autonGPreleaseTime; 
   public double autonFinalPos = -160; //-160  inches to drive backwards
   public double autonFinalPark = -85; // distance to park or posibly engage
+  public double autoEngageHalfPoint = -85;
   public double autonCubePos = -165; //-180  inches to drive backwards
   public double autoCubeNodePos = 185; //189  inches to cube node
   public double autonIntoCubePos = -25;
@@ -126,6 +128,7 @@ public class Robot extends TimedRobot {
   public boolean autoArmExtend2 = false;
   public boolean encoderReset = false; 
   public boolean AutocubeInMore = false;
+  public boolean autoNotTipped = false;
   public double autonArmOutTime;
   public double autoMoreCubeInTime;
 
@@ -133,6 +136,11 @@ public class Robot extends TimedRobot {
   public String autonRoutine;
   public double matchTimer;
   public double mCurrentAngle;
+  public double mYaw;
+  public double mPitch;
+  public double mRoll;
+
+  public double direction;
 
   public UsbCamera fishEye;
 
@@ -147,7 +155,8 @@ public class Robot extends TimedRobot {
     m_chooser.addOption("Cone-Park-Auto", kConeParkAuto);
     m_chooser.addOption("Blue-2-Auto", kBlue2Auto);
     m_chooser.addOption("Red-2-Auto", kRed2Auto);
-    m_chooser.addOption("Cone-Stay-Still-Auto", kConeStayStillAuto); 
+    m_chooser.addOption("Cone-Stay-Still-Auto", kConeStayStillAuto);
+    m_chooser.addOption("Engage-Cone", kEngageAuto); 
     SmartDashboard.putData("Auto",m_chooser);
 
     // Open USB Camera
@@ -261,7 +270,15 @@ public class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() {
     mCurrentAngle = mGyro.getAngle();
+    mYaw = mGyro.getYaw();
+    mPitch = mGyro.getPitch();
+    mRoll = mGyro.getRoll();
+
     SmartDashboard.putNumber("Gyro", mCurrentAngle);
+    SmartDashboard.putNumber("Yaw", mYaw);
+    SmartDashboard.putNumber("Pitch", mPitch);
+    SmartDashboard.putNumber("Roll", mRoll);
+    
     m_autoSelected = m_chooser.getSelected();
 
     // push values to dashboard here
@@ -332,6 +349,7 @@ public class Robot extends TimedRobot {
     autoIntakeIn = false;
     encoderReset = false;
     AutocubeInMore = false;
+    autoNotTipped = false;
 
     intakeExtend = false;
     intakeIn = false;
@@ -354,7 +372,7 @@ public class Robot extends TimedRobot {
   * move back
   * 
   */
-    if ((m_autoSelected == kConeAuto) || (m_autoSelected == kConeParkAuto) || (m_autoSelected == kConeStayStillAuto)) { 
+    if ((m_autoSelected == kConeAuto) || (m_autoSelected == kConeParkAuto) || (m_autoSelected == kConeStayStillAuto) || (m_autoSelected == kEngageAuto)) { 
       // standard auto (cone and leave community) & park auto
       if (!autoArmExtend){
         if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 3)) { //arm out with 3 second breakout
@@ -407,11 +425,23 @@ public class Robot extends TimedRobot {
         } else {
           mRobotDrive.arcadeDrive(0, 0);
         }
-      } 
+      }
+      else if (!autoMove && autoArmRetract && (m_autoSelected == kEngageAuto)) {
+        if (mLeftEncoder.getPosition() > autoEngageHalfPoint) { // drive back for dock (all at 45% except last 10") 85" total
+          mRobotDrive.arcadeDrive(-0.45, 0);
+        } else if ((mRoll > 10) && (autoNotTipped == false)){
+          mRobotDrive.arcadeDrive(-0.35, 0);
+        } else if (Math.abs(mRoll) > 2) {
+          autoNotTipped = true;
+          direction = -(mRoll/Math.abs(mRoll));
+          mRobotDrive.arcadeDrive(.2*direction, 0);
+        } else {
+          mRobotDrive.arcadeDrive(0, 0);
+        }
+      }
       else {
       mRobotDrive.arcadeDrive(0, 0); // mid auto when we don't want to move - kConeStayStillAuto
       }
-  
     }
     
     else { // super auto
@@ -491,7 +521,7 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if(!encoderReset && autoCubeTurn && (mLeftEncoder.getPosition() == 0)){ //bit that ensures drive encoders are reset before proceeding
+      if(!encoderReset && autoCubeTurn && (mLeftEncoder.getPosition()*mLeftEncoder.getPosition() <= 2)){ //bit that ensures drive encoders are reset before proceeding
         encoderReset = true;
         mGyro.reset();
       }
@@ -770,7 +800,7 @@ public class Robot extends TimedRobot {
     autoIntoCube = false;
     autoCubeNodeTurn = false;
     encoderReset = false;
-    AutocubeInMore = false;
+    autoNotTipped = false;
     autoAtCubeNode = false;
     autoGPrelease2 = false;
     autoIntakeIn = false;
@@ -803,6 +833,7 @@ public class Robot extends TimedRobot {
     autoIntakeIn = false;
     intakeExtend = false;
     intakeIn = false;
+    autoNotTipped = false;
     AutocubeInMore = false;
   }
 }
