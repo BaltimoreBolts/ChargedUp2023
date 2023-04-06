@@ -9,6 +9,8 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.RelativeEncoder;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.AddressableLED;
+import edu.wpi.first.wpilibj.AddressableLEDBuffer;
 //import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Joystick;
@@ -141,6 +143,8 @@ public class Robot extends TimedRobot {
   public double mRoll;
 
   public double direction;
+  public AddressableLED mLED;
+  public AddressableLEDBuffer mLEDbuffer;
 
   public UsbCamera fishEye;
 
@@ -150,6 +154,13 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+
+    //LED logic
+    mLED = new AddressableLED(0);
+    mLEDbuffer = new AddressableLEDBuffer(9);
+    mLED.setLength(mLEDbuffer.getLength());
+    mLED.setData(mLEDbuffer);
+    mLED.start();
 
     m_chooser.setDefaultOption("Default Cone-Auto", kConeAuto);
     m_chooser.addOption("Cone-Park-Auto", kConeParkAuto);
@@ -269,6 +280,14 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
+
+    for (var i = 0; i < mLEDbuffer.getLength(); i++) {
+      //sets the specified LED to the RGB values for red
+      mLEDbuffer.setRGB(i, 0, 128, 255);
+    }
+
+    mLED.setData(mLEDbuffer);
+
     mCurrentAngle = mGyro.getAngle();
     mYaw = mGyro.getYaw();
     mPitch = mGyro.getPitch();
@@ -375,7 +394,7 @@ public class Robot extends TimedRobot {
     if ((m_autoSelected == kConeAuto) || (m_autoSelected == kConeParkAuto) || (m_autoSelected == kConeStayStillAuto) || (m_autoSelected == kEngageAuto)) { 
       // standard auto (cone and leave community) & park auto
       if (!autoArmExtend){
-        if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 3)) { //arm out with 3 second breakout
+        if ((mArmEncoder.getPosition() > maxArm) && (autonCurrentTime - autonStartTime <= 2.25)) { //arm out with 3 second breakout
           mArm.set(speedOut);
           mGrabber.set(-0.1); //cone
           //mGrabber.set(0.1); //cube
@@ -391,7 +410,7 @@ public class Robot extends TimedRobot {
       if (!autoGPrelease && autoArmExtend) {
           mGrabber.set(0.35); //cone
           //mGrabber.set(-0.35); //cube
-          if ((autonCurrentTime - autonGPreleaseTime) >= 1){
+          if ((autonCurrentTime - autonGPreleaseTime) >= .5){
             mGrabber.stopMotor();
             autoGPrelease = true;
           }
@@ -407,7 +426,7 @@ public class Robot extends TimedRobot {
         }
       }
 
-      if (!autoMove && autoArmRetract && (m_autoSelected == kConeAuto)) {
+      if (!autoMove && autoGPrelease && (m_autoSelected == kConeAuto)) {
         // move at least X" backwards (negative position)
         if (mLeftEncoder.getPosition() > autonFinalPos) { // drive back for normal mobility (160")
           mRobotDrive.arcadeDrive(-0.5, 0);
@@ -415,7 +434,7 @@ public class Robot extends TimedRobot {
           mRobotDrive.arcadeDrive(0, 0);
         }
       } 
-      else if (!autoMove && autoArmRetract && (m_autoSelected == kConeParkAuto)) {
+      else if (!autoMove && autoGPrelease && (m_autoSelected == kConeParkAuto)) {
         // move at least X" backwards (negative position)
         if (mLeftEncoder.getPosition() > autonFinalPark+10) { // drive back for dock (all at 45% except last 10") 85" total
           mRobotDrive.arcadeDrive(-0.45, 0);
@@ -426,15 +445,15 @@ public class Robot extends TimedRobot {
           mRobotDrive.arcadeDrive(0, 0);
         }
       }
-      else if (!autoMove && autoArmRetract && (m_autoSelected == kEngageAuto)) {
+      else if (!autoMove && autoGPrelease && (m_autoSelected == kEngageAuto)) {
         if (mLeftEncoder.getPosition() > autoEngageHalfPoint) { // drive back for dock (all at 45% except last 10") 85" total
-          mRobotDrive.arcadeDrive(-0.45, 0);
-        } else if ((mRoll > 10) && (autoNotTipped == false)){
-          mRobotDrive.arcadeDrive(-0.35, 0);
-        } else if (Math.abs(mRoll) > 2) {
+          mRobotDrive.arcadeDrive(-0.4, 0);
+        } else if ((mRoll > 18) && (autoNotTipped == false)){
+          mRobotDrive.arcadeDrive(-0.30, 0);
+        } else if (Math.abs(mRoll) > 3) {
           autoNotTipped = true;
           direction = -(mRoll/Math.abs(mRoll));
-          mRobotDrive.arcadeDrive(.2*direction, 0);
+          mRobotDrive.arcadeDrive(.28*direction, 0);
         } else {
           mRobotDrive.arcadeDrive(0, 0);
         }
