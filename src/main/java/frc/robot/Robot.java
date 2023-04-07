@@ -27,6 +27,9 @@ import edu.wpi.first.cscore.UsbCamera;
 import edu.wpi.first.cscore.VideoMode.PixelFormat;
 import edu.wpi.first.cscore.VideoSource.ConnectionStrategy;
 import edu.wpi.first.wpilibj.SPI;
+
+import java.util.MissingFormatArgumentException;
+
 import com.kauailabs.navx.frc.AHRS;
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -84,7 +87,7 @@ public class Robot extends TimedRobot {
   public double rWidth = 2; // robot width in inches
 
   public double maxArm = -45; // encoder value at full extension for arm
-  public double midArm = -25; // encoder value at mid extension for arm
+  public double midArm = -16; // encoder value at mid extension for arm
   public double closedArm = 1; // encoder value at full retraction for arm 
   public double speedOut = -0.25;
   public double speedIn = 0.25;
@@ -156,12 +159,14 @@ public class Robot extends TimedRobot {
   public void robotInit() {
 
     //LED logic
+    /*
     mLED = new AddressableLED(0);
     mLEDbuffer = new AddressableLEDBuffer(15);
     mLED.setLength(mLEDbuffer.getLength());
     mLED.setData(mLEDbuffer);
     mLED.start();
-
+    */
+    
     m_chooser.setDefaultOption("Default Cone-Auto", kConeAuto);
     m_chooser.addOption("Cone-Park-Auto", kConeParkAuto);
     m_chooser.addOption("Blue-2-Auto", kBlue2Auto);
@@ -281,6 +286,7 @@ public class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() {
 
+    /*
     for (var i = 0; i < mLEDbuffer.getLength(); i++) {
       //sets the specified LED to the RGB values for blue
       mLEDbuffer.setRGB(i, 255, 0, 0);
@@ -288,15 +294,18 @@ public class Robot extends TimedRobot {
     }
 
     mLED.setData(mLEDbuffer);
+    */
 
-    mCurrentAngle = mGyro.getAngle();
-    mYaw = mGyro.getYaw();
-    mPitch = mGyro.getPitch();
-    mRoll = mGyro.getRoll();
-
+    if (DriverStation.isAutonomous()) {
+      mCurrentAngle = mGyro.getAngle();
+      mRoll = mGyro.getRoll();
+      //mYaw = mGyro.getYaw();
+      //mPitch = mGyro.getPitch();
+    }
+    
     SmartDashboard.putNumber("Gyro", mCurrentAngle);
-    SmartDashboard.putNumber("Yaw", mYaw);
-    SmartDashboard.putNumber("Pitch", mPitch);
+    //SmartDashboard.putNumber("Yaw", mYaw);
+    //SmartDashboard.putNumber("Pitch", mPitch);
     SmartDashboard.putNumber("Roll", mRoll);
     
     m_autoSelected = m_chooser.getSelected();
@@ -325,8 +334,8 @@ public class Robot extends TimedRobot {
     SmartDashboard.putBoolean("autoAtCubeNode", autoAtCubeNode);
     SmartDashboard.putBoolean("autoGPrelease2", autoGPrelease2);
     
-    matchTimer = DriverStation.getMatchTime();
-    SmartDashboard.putNumber("MatchTime", matchTimer);
+    //matchTimer = DriverStation.getMatchTime();
+    //SmartDashboard.putNumber("MatchTime", matchTimer);
 
   }
 
@@ -781,6 +790,23 @@ public class Robot extends TimedRobot {
     else if (mXbox.getAButton()) { // Move arm in
       mArm.set(speedIn);
     }
+    else if ((mXbox.getPOV()==90) || (mXbox.getPOV()==270 || mArmGoToMID)){
+      //extend arm to MID
+      mArmGoToMID = true;
+      if (mArmEncoder.getPosition() > midArm+2){
+        mArm.set(speedOut);
+      }
+      else if (mArmEncoder.getPosition() < midArm-2) {
+        mArm.set(speedIn);
+      }
+      else {
+        mArm.stopMotor();
+      }
+      if (mArmEncoder.getPosition() >= (midArm-5) && mArmEncoder.getPosition() <= (midArm+5)) {
+        mArmGoToMID = false;
+      }
+      }
+  
     else {
       mArm.stopMotor();
       mArmGoToMID = false;
