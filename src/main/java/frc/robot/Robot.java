@@ -157,7 +157,7 @@ public class Robot extends TimedRobot {
 
     //LED logic
     mLED = new AddressableLED(0);
-    mLEDbuffer = new AddressableLEDBuffer(9);
+    mLEDbuffer = new AddressableLEDBuffer(15);
     mLED.setLength(mLEDbuffer.getLength());
     mLED.setData(mLEDbuffer);
     mLED.start();
@@ -282,8 +282,9 @@ public class Robot extends TimedRobot {
   public void robotPeriodic() {
 
     for (var i = 0; i < mLEDbuffer.getLength(); i++) {
-      //sets the specified LED to the RGB values for red
-      mLEDbuffer.setRGB(i, 0, 128, 255);
+      //sets the specified LED to the RGB values for blue
+      mLEDbuffer.setRGB(i, 255, 0, 0);
+      //mLEDbuffer.setHSV(i, 160, 240, 120);
     }
 
     mLED.setData(mLEDbuffer);
@@ -416,7 +417,7 @@ public class Robot extends TimedRobot {
           }
       }
 
-      if (!autoArmRetract && autoGPrelease) {
+      if (!autoArmRetract && autoGPrelease && !(m_autoSelected == kEngageAuto)) {
         if (mArmEncoder.getPosition() < closedArm) {
           mArm.set(speedIn);
         }
@@ -445,22 +446,36 @@ public class Robot extends TimedRobot {
           mRobotDrive.arcadeDrive(0, 0);
         }
       }
-      else if (!autoMove && autoGPrelease && (m_autoSelected == kEngageAuto)) {
+      else if (!autoMove && autoGPrelease) {
         if (mLeftEncoder.getPosition() > autoEngageHalfPoint) { // drive back for dock (all at 45% except last 10") 85" total
           mRobotDrive.arcadeDrive(-0.4, 0);
         } else if ((mRoll > 18) && (autoNotTipped == false)){
           mRobotDrive.arcadeDrive(-0.30, 0);
         } else if (Math.abs(mRoll) > 3) {
+          autoGPrelease2 = true;
           autoNotTipped = true;
           direction = -(mRoll/Math.abs(mRoll));
-          mRobotDrive.arcadeDrive(.28*direction, 0);
+          mRobotDrive.arcadeDrive(.32*direction, 0);
         } else {
+          //waitTime = Timer.getFPGATimestamp();
           mRobotDrive.arcadeDrive(0, 0);
         }
       }
       else {
       mRobotDrive.arcadeDrive(0, 0); // mid auto when we don't want to move - kConeStayStillAuto
       }
+
+      //pull in arm during balancing; using the autoArmExtend2 (no longer used)
+      if (autoGPrelease2 && !autoArmExtend2) {
+        if (mArmEncoder.getPosition() < closedArm) {
+          mArm.set(speedIn);
+        }
+        else {
+          mArm.stopMotor();
+          autoArmExtend2 = true;
+        }
+      }
+
     }
     
     else { // super auto
@@ -567,6 +582,7 @@ public class Robot extends TimedRobot {
           mLeftEncoder.setPosition(0);
           mRightEncoder.setPosition(0);
           autoCubeNodeTurn = true;
+          autoMoreCubeInTime = Timer.getFPGATimestamp();
         }
       }
 
@@ -578,9 +594,20 @@ public class Robot extends TimedRobot {
           mLeftEncoder.setPosition(0);
           mRightEncoder.setPosition(0);
           autoCubeNodeTurn = true;
+          autoMoreCubeInTime = Timer.getFPGATimestamp();
         }
       }
 
+      if (!autoAtCubeNode && autoCubeNodeTurn) {
+        mRobotDrive.arcadeDrive(0, 0);
+        if (autonCurrentTime - autoMoreCubeInTime >= 3) {
+          mIntakeSpin.set(0); //stops tunnel/intake motors after extra intaking time
+          mTunnelSpin.set(0);
+          mGrabber.set(0);
+        }
+      }
+
+      /*
       if (!autoAtCubeNode && autoCubeNodeTurn) { //driving to cube node --> pulls in intake, then arm out
         if (mLeftEncoder.getPosition() < autoCubeNodePos) { // 194"
           mRobotDrive.arcadeDrive(0.48, 0);
@@ -628,6 +655,7 @@ public class Robot extends TimedRobot {
           autoGPrelease2 = true;
         }
       }
+    */
     }
 
   } else {
