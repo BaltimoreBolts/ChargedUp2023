@@ -28,8 +28,6 @@ import edu.wpi.first.cscore.VideoMode.PixelFormat;
 import edu.wpi.first.cscore.VideoSource.ConnectionStrategy;
 import edu.wpi.first.wpilibj.SPI;
 
-import java.util.MissingFormatArgumentException;
-
 import com.kauailabs.navx.frc.AHRS;
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -110,7 +108,7 @@ public class Robot extends TimedRobot {
   public double autonGPreleaseTime; 
   public double autonFinalPos = -160; //-160  inches to drive backwards
   public double autonFinalPark = -85; // distance to park or posibly engage
-  public double autoEngageHalfPoint = -85;
+  public double autoEngageHalfPoint = 85;
   public double autonCubePos = -165; //-180  inches to drive backwards
   public double autoCubeNodePos = 185; //189  inches to cube node
   public double autonIntoCubePos = -25;
@@ -426,7 +424,7 @@ public class Robot extends TimedRobot {
           }
       }
 
-      if (!autoArmRetract && autoGPrelease && !(m_autoSelected == kEngageAuto)) {
+      if (!autoArmRetract && autoGPrelease) {
         if (mArmEncoder.getPosition() < closedArm) {
           mArm.set(speedIn);
         }
@@ -455,13 +453,25 @@ public class Robot extends TimedRobot {
           mRobotDrive.arcadeDrive(0, 0);
         }
       }
-      else if (!autoMove && autoGPrelease) {
-        if (mLeftEncoder.getPosition() > autoEngageHalfPoint) { // drive back for dock (all at 45% except last 10") 85" total
-          mRobotDrive.arcadeDrive(-0.4, 0);
-        } else if ((mRoll > 18) && (autoNotTipped == false)){
+      else if (!autoGPrelease2 && autoGPrelease && (m_autoSelected == kEngageAuto)) {
+        if (-170 <= mCurrentAngle){ //turns 180 degrees CCW (we want 40 from the overshoot)
+          mRobotDrive.arcadeDrive(0, 0.35); //val is opposite for all turns due to flipped stick
+        } else {
+          mRobotDrive.arcadeDrive(0, 0);
+          mLeftEncoder.setPosition(0);
+          mRightEncoder.setPosition(0);
+          autoMoreCubeInTime = Timer.getFPGATimestamp();
+          autoGPrelease2 = true;
+        }
+      } else if (!autoMove && autoGPrelease2 && (m_autoSelected == kEngageAuto)) {
+        if (autonCurrentTime - autoMoreCubeInTime < 0.5) {
+          mRobotDrive.arcadeDrive(0, 0);
+        } else if (mLeftEncoder.getPosition() < autoEngageHalfPoint) { // drive back for dock (all at 45% except last 10") 85" total
+          mRobotDrive.arcadeDrive(0.4, 0);
+        } else if ((mRoll < -15) && (autoNotTipped == false)){
           mRobotDrive.arcadeDrive(-0.30, 0);
         } else if (Math.abs(mRoll) > 3) {
-          autoGPrelease2 = true;
+          //autoGPrelease2 = true;
           autoNotTipped = true;
           direction = -(mRoll/Math.abs(mRoll));
           mRobotDrive.arcadeDrive(.32*direction, 0);
@@ -475,7 +485,7 @@ public class Robot extends TimedRobot {
       }
 
       //pull in arm during balancing; using the autoArmExtend2 (no longer used)
-      if (autoGPrelease2 && !autoArmExtend2) {
+  /*     if (autoGPrelease2 && !autoArmExtend2) {
         if (mArmEncoder.getPosition() < closedArm) {
           mArm.set(speedIn);
         }
@@ -483,7 +493,7 @@ public class Robot extends TimedRobot {
           mArm.stopMotor();
           autoArmExtend2 = true;
         }
-      }
+      } */
 
     }
     
@@ -767,8 +777,8 @@ public class Robot extends TimedRobot {
     }
     else if (mXbox.getRightBumper()) { // Pull cube into robot (up the tunnel)
       mGrabber.set(0.35);
-      mIntakeSpin.set(.25);
-      mTunnelSpin.set(-.25);
+      mIntakeSpin.set(.35);
+      mTunnelSpin.set(-.4);
     }
     else if (mXbox.getRightTriggerAxis() == 1){ //Pickup CUBE
       mGrabber.set(0.35);
