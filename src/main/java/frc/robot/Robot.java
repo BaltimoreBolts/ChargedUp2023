@@ -748,6 +748,7 @@ public class Robot extends TimedRobot {
       mGyro.reset();
     }
 
+/*
     if ((mStick.getRawButton(1)) || (mStick.getRawButton(3))) {
       intakeStartTime = Timer.getFPGATimestamp();
       intaking = true;
@@ -765,6 +766,7 @@ public class Robot extends TimedRobot {
         intaking = false;
       }
     }
+*/
 
     //Grabber control
     if (mXbox.getLeftBumper()) { // Push cube out of robot (down the tunnel)
@@ -774,6 +776,9 @@ public class Robot extends TimedRobot {
     }
     else if (mXbox.getLeftTriggerAxis() == 1){ //Pickup CONE
       mGrabber.set(-0.45);
+    } 
+    else if ((mStick.getRawButton(3))){
+      mGrabber.set(-0.15);
     }
     else if (mXbox.getRightBumper()) { // Pull cube into robot (up the tunnel)
       mGrabber.set(0.35);
